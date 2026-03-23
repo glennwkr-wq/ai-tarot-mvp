@@ -1,22 +1,23 @@
-from aiogram import Router, types
-import random
+from aiogram import Router, types, F
 
 from app.services.tarot.engine import draw_cards
 from app.providers.llm.openai import generate_tarot_answer
 
 router = Router()
 
-cards = [
-    "Шут", "Маг", "Жрица", "Императрица", "Император",
-    "Иерофант", "Влюбленные", "Колесница", "Сила", "Отшельник",
-    "Колесо фортуны", "Справедливость", "Повешенный", "Смерть",
-    "Умеренность", "Дьявол", "Башня", "Звезда", "Луна", "Солнце",
-    "Суд", "Мир"
-]
+
+# 🔮 Расклад
+@router.message(F.text == "🔮 Сделать расклад")
+async def start_tarot(message: types.Message):
+    await message.answer("Задайте ваш вопрос 🔮")
 
 
 @router.message()
 async def tarot_handler(message: types.Message):
+    # ❗ игнорируем кнопки меню
+    if message.text in ["🔮 Сделать расклад", "🃏 Карта дня", "💰 Баланс"]:
+        return
+
     question = message.text
 
     cards = draw_cards(3)

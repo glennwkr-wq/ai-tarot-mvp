@@ -4,10 +4,9 @@ from aiogram import Bot, Dispatcher
 from aiogram.client.session.aiohttp import AiohttpSession
 
 from app.core.config import settings
-from app.bot.handlers import start, tarot
+from app.bot.handlers import start, tarot, menu
 
 
-# === ИНИЦИАЛИЗАЦИЯ КАК В РАБОЧЕМ БОТЕ ===
 session = AiohttpSession()
 
 bot = Bot(
@@ -18,6 +17,7 @@ bot = Bot(
 dp = Dispatcher()
 
 dp.include_router(start.router)
+dp.include_router(menu.router)
 dp.include_router(tarot.router)
 
 
