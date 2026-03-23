@@ -1,32 +1,19 @@
-from openai import OpenAI
-from app.core.config import settings
-
-client = OpenAI(api_key=settings.OPENAI_API_KEY)
+import random
+from app.knowledge_base.cards import CARDS
 
 
-def generate_tarot_reading(cards: list[str], question: str) -> str:
-    prompt = f"""
-Ты таролог. Дай краткое, понятное и мистическое толкование.
+def draw_cards(n: int = 3) -> list[dict]:
+    return random.sample(CARDS, n)
 
+
+def build_interpretation_context(cards: list[dict], question: str) -> str:
+    return f"""
 Вопрос пользователя:
 {question}
 
 Карты:
-{", ".join(cards)}
+{chr(10).join([f"{c['name']}: {c['meaning']}" for c in cards])}
 
-Ответ:
-- не более 5-6 предложений
-- без воды
-- конкретно по ситуации
+Сделай интерпретацию, опираясь только на значения карт.
+Не придумывай новые значения.
 """
-
-    response = client.chat.completions.create(
-        model="gpt-5.4-mini",
-        messages=[
-            {"role": "user", "content": prompt}
-        ],
-        max_tokens=300,
-        temperature=0.8,
-    )
-
-    return response.choices[0].message.content
