@@ -1,23 +1,34 @@
-from aiogram import Router
-from aiogram.types import Message
+from aiogram import Router, types
+import random
 
-from app.services.tarot.engine import draw_cards
+from app.services.tarot.engine import generate_tarot_reading
 
 router = Router()
 
+cards = [
+"Шут", "Маг", "Жрица", "Императрица", "Император",
+"Иерофант", "Влюбленные", "Колесница", "Сила", "Отшельник",
+"Колесо фортуны", "Справедливость", "Повешенный", "Смерть",
+"Умеренность", "Дьявол", "Башня", "Звезда", "Луна", "Солнце",
+"Суд", "Мир"
+]
 
 @router.message()
-async def tarot_handler(message: Message):
-    cards = draw_cards(3)
+async def tarot_handler(message: types.Message):
+question = message.text
 
-    text = "🔮 Ваш расклад:\n\n"
+```
+selected_cards = random.sample(cards, 3)
 
-    for i, card in enumerate(cards, start=1):
-        position = "🔻 перевёрнутая" if card["reversed"] else "🔺 прямая"
+await message.answer("🔮 Думаю над раскладом...")
 
-        text += f"{i}. {card['name']} ({position})\n"
-        text += f"— {card['meaning']}\n\n"
+try:
+    reading = generate_tarot_reading(selected_cards, question)
 
-    text += "✨ Прислушайтесь к себе — ответ уже внутри вас."
+    await message.answer(
+        f"🃏 Твои карты: {', '.join(selected_cards)}\n\n{reading}"
+    )
 
-    await message.answer(text)
+except Exception as e:
+    await message.answer("⚠️ Ошибка при обращении к AI. Попробуй позже.")
+    print("AI ERROR:", e)
