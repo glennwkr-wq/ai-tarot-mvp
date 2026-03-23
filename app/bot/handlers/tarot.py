@@ -7,19 +7,25 @@ from app.core.config import settings
 
 router = Router()
 
-# 💾 ВРЕМЕННОЕ ХРАНИЛИЩЕ БАЛАНСА
-user_balances = {}
+# ===================== 💾 БАЛАНС =====================
 
+user_balances = {}
 
 def get_balance(user_id: int) -> int:
     if user_id == settings.ADMIN_ID:
         return 9999
     return user_balances.get(user_id, 3)
 
-
 def change_balance(user_id: int, amount: int):
     user_balances[user_id] = get_balance(user_id) + amount
 
+
+# ===================== 🧠 СОСТОЯНИЕ =====================
+
+waiting_for_question = set()
+
+
+# ===================== 🎹 КЛАВИАТУРЫ =====================
 
 def get_after_reading_keyboard():
     return types.ReplyKeyboardMarkup(
@@ -60,8 +66,6 @@ async def balance_handler(message: types.Message):
         reply_markup=keyboard
     )
 
-
-# ===================== 💳 ПОКУПКА (заглушка) =====================
 
 @router.message(F.text.startswith("💳 Купить"))
 async def buy_handler(message: types.Message):
@@ -135,11 +139,16 @@ async def tarot_no_question(message: types.Message):
         print("AI ERROR:", e)
 
 
-# ===================== 💬 УТОЧНЕНИЕ =====================
+# ===================== 💬 УТОЧНИТЬ ВОПРОС =====================
 
 @router.message(F.text == "💬 Уточнить вопрос")
 async def ask_question(message: types.Message):
-    await message.answer("Напиши уточняющий вопрос 🔮")
+    waiting_for_question.add(message.from_user.id)
+
+    await message.answer(
+        "Напиши свой вопрос ✨\n\n"
+        "Я учту его в раскладе."
+    )
 
 
 # ===================== 🃏 ДОП КАРТА =====================
@@ -157,13 +166,12 @@ async def extra_card(message: types.Message):
     card = draw_cards(1)[0]
 
     await message.answer(
-        f"🃏 Дополнительная карта: {card['name']}\n\n"
-        f"{card['meaning']}",
+        f"🃏 Дополнительная карта: {card['name']}\n\n{card['meaning']}",
         reply_markup=get_after_reading_keyboard()
     )
 
 
-# ===================== 🔄 НОВЫЙ РАСКЛАД =====================
+# ===================== 🔄 НОВЫЙ =====================
 
 @router.message(F.text == "🔄 Новый расклад")
 async def new_spread(message: types.Message):
@@ -180,50 +188,60 @@ async def back_to_menu(message: types.Message):
     )
 
 
-# ===================== 💬 ВОПРОС =====================
+# ===================== ❌ ЗАГЛУШКИ =====================
+
+@router.message(F.text == "📜 История")
+async def history_stub(message: types.Message):
+    await message.answer("📜 История скоро появится")
+
+@router.message(F.text == "⚙️ Настройки")
+async def settings_stub(message: types.Message):
+    await message.answer("⚙️ Настройки скоро появятся")
+
+@router.message(F.text == "❤️ На отношения")
+async def love_stub(message: types.Message):
+    await tarot_no_question(message)
+
+
+# ===================== 💬 ОБРАБОТКА ВОПРОСА =====================
 
 @router.message()
-async def tarot_with_question(message: types.Message):
-    if message.text in [
-        "🔮 Расклад",
-        "🃏 Карта дня",
-        "💰 Баланс",
-        "💬 Уточнить вопрос",
-        "🃏 Доп карта",
-        "🔄 Новый расклад",
-        "🔙 Меню",
-        "💳 Купить 10 — 99⭐",
-        "💳 Купить 30 — 249⭐",
-    ]:
-        return
-
+async def handle_text(message: types.Message):
     user_id = message.from_user.id
 
-    if get_balance(user_id) <= 0:
-        await message.answer("❌ Недостаточно кредитов.")
+    # 👉 если ждём вопрос
+    if user_id in waiting_for_question:
+        waiting_for_question.remove(user_id)
+
+        if get_balance(user_id) <= 0:
+            await message.answer("❌ Недостаточно кредитов.")
+            return
+
+        change_balance(user_id, -1)
+
+        cards = draw_cards(3)
+
+        await message.answer("🔮 Думаю над раскладом...")
+
+        try:
+            reading = await generate_tarot_answer(message.text, cards)
+
+            card_names = [c["name"] for c in cards]
+
+            await message.answer(
+                f"🃏 Ваши карты: {', '.join(card_names)}\n\n{reading}"
+            )
+
+            await message.answer(
+                "✨ Что дальше?",
+                reply_markup=get_after_reading_keyboard()
+            )
+
+        except Exception as e:
+            await message.answer("⚠️ Ошибка при обращении к AI.")
+            print("AI ERROR:", e)
+
         return
 
-    change_balance(user_id, -1)
-
-    question = message.text
-    cards = draw_cards(3)
-
-    await message.answer("🔮 Думаю над раскладом...")
-
-    try:
-        reading = await generate_tarot_answer(question, cards)
-
-        card_names = [c["name"] for c in cards]
-
-        await message.answer(
-            f"🃏 Ваши карты: {', '.join(card_names)}\n\n{reading}"
-        )
-
-        await message.answer(
-            "✨ Что дальше?",
-            reply_markup=get_after_reading_keyboard()
-        )
-
-    except Exception as e:
-        await message.answer("⚠️ Ошибка при обращении к AI.")
-        print("AI ERROR:", e)
+    # 👉 игнор всего лишнего
+    return
