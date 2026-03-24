@@ -9,6 +9,7 @@ from app.bot.handlers import start, tarot
 
 from app.db.base import Base
 from app.db.session import engine
+from app.models import user, reading
 
 
 session = AiohttpSession()
