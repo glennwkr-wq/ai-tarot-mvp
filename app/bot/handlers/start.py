@@ -21,7 +21,6 @@ def get_main_keyboard():
                 types.KeyboardButton(text="🃏 Карта дня"),
             ],
             [
-                types.KeyboardButton(text="💬 Задать вопрос"),
                 types.KeyboardButton(text="❤️ На отношения"),
             ],
             [

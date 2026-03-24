@@ -11,71 +11,68 @@ router = Router()
 waiting_for_question = set()
 
 
+def get_skip_keyboard():
+    return types.ReplyKeyboardMarkup(
+        keyboard=[
+            [types.KeyboardButton(text="⏭ Пропустить")],
+            [types.KeyboardButton(text="🔙 Меню")]
+        ],
+        resize_keyboard=True
+    )
+
+
 def get_after_reading_keyboard():
     return types.ReplyKeyboardMarkup(
         keyboard=[
-            [types.KeyboardButton(text="💬 Уточнить вопрос")],
+            [types.KeyboardButton(text="🔮 Новый расклад")],
             [types.KeyboardButton(text="🔙 Меню")],
         ],
         resize_keyboard=True
     )
 
 
-# ===================== 💰 БАЛАНС =====================
+# ===================== 🔮 СТАРТ РАСКЛАДА =====================
 
-@router.message(F.text == "💰 Баланс")
-async def balance_handler(message: types.Message):
-    balance = await get_balance(message.from_user.id)
+@router.message(F.text == "🔮 Расклад")
+async def start_spread(message: types.Message):
+    waiting_for_question.add(message.from_user.id)
 
     await message.answer(
-        f"💰 <b>Ваш баланс: {balance} кредитов</b>",
-        parse_mode="HTML"
+        "✨ Если у вас есть вопрос — напишите его.\n\n"
+        "Или нажмите «Пропустить», чтобы сделать общий расклад.",
+        reply_markup=get_skip_keyboard()
     )
 
 
-# ===================== 👤 ПРОФИЛЬ =====================
+# ===================== ⏭ ПРОПУСК =====================
 
-@router.message(F.text == "👤 Профиль")
-async def profile_handler(message: types.Message):
-    user = await get_user(message.from_user.id)
+@router.message(F.text == "⏭ Пропустить")
+async def skip_question(message: types.Message):
+    user_id = message.from_user.id
 
-    balance = await get_display_balance(user)
+    if user_id in waiting_for_question:
+        waiting_for_question.remove(user_id)
 
-    await message.answer(
-        f"👤 <b>Ваш профиль</b>\n\n"
-        f"Имя: {user.name}\n"
-        f"Дата рождения: {user.birthdate}\n"
-        f"Знак: {user.zodiac}\n"
-        f"Баланс: {balance}",
-        parse_mode="HTML"
-    )
+    await process_reading(message, "Общий расклад")
 
 
 # ===================== 💬 ВОПРОС =====================
 
-@router.message(F.text == "💬 Задать вопрос")
-async def ask_question_start(message: types.Message):
-    waiting_for_question.add(message.from_user.id)
+@router.message()
+async def handle_text(message: types.Message):
+    user_id = message.from_user.id
 
-    await message.answer("✨ Напишите ваш вопрос...")
+    if user_id not in waiting_for_question:
+        return
 
+    waiting_for_question.remove(user_id)
 
-# ===================== 🔮 РАСКЛАД =====================
-
-async def safe_generate(question, cards):
-    try:
-        return await generate_tarot_answer(question, cards)
-    except:
-        # fallback
-        return (
-            "Карты указывают на важный период.\n\n"
-            "Сейчас многое зависит от ваших решений.\n"
-            "Доверьтесь внутреннему ощущению."
-        )
+    await process_reading(message, message.text)
 
 
-@router.message(F.text == "🔮 Расклад")
-async def tarot_no_question(message: types.Message):
+# ===================== 🧠 ОБЩАЯ ЛОГИКА =====================
+
+async def process_reading(message: types.Message, question: str):
     user_id = message.from_user.id
 
     if await get_balance(user_id) <= 0:
@@ -86,38 +83,73 @@ async def tarot_no_question(message: types.Message):
 
     cards = draw_cards(3)
 
-    await message.answer("🔮 Делаю расклад...")
+    await message.answer("🔮 Смотрю карты...")
 
-    reading = await safe_generate("Общий расклад", cards)
+    try:
+        reading = await generate_tarot_answer(question, cards)
+    except:
+        reading = (
+            "Карты указывают на важный период.\n\n"
+            "Сейчас многое зависит от ваших решений."
+        )
 
-    await save_reading(user_id, "Общий расклад", cards, reading)
+    await save_reading(user_id, question, cards, reading)
 
-    await message.answer(reading)
+    await message.answer(reading, reply_markup=get_after_reading_keyboard())
 
 
-# ===================== 💬 ОБРАБОТКА =====================
+# ===================== ❤️ ОТНОШЕНИЯ =====================
 
-@router.message()
-async def handle_text(message: types.Message):
-    user_id = message.from_user.id
+@router.message(F.text == "❤️ На отношения")
+async def love_reading(message: types.Message):
+    await process_reading(message, "Расклад на отношения")
 
-    if user_id in waiting_for_question:
-        waiting_for_question.remove(user_id)
 
-        if await get_balance(user_id) <= 0:
-            await message.answer("❌ Недостаточно кредитов.")
-            return
+# ===================== 🃏 КАРТА ДНЯ =====================
 
-        await change_balance(user_id, -1)
+@router.message(F.text == "🃏 Карта дня")
+async def card_of_day(message: types.Message):
+    cards = draw_cards(1)
+    card = cards[0]
 
-        cards = draw_cards(3)
+    await message.answer(
+        f"🃏 <b>Карта дня — {card['name']}</b>\n\n{card['meaning']}",
+        parse_mode="HTML",
+        reply_markup=get_main_keyboard()
+    )
 
-        await message.answer("🔮 Смотрю карты...")
 
-        reading = await safe_generate(message.text, cards)
+# ===================== 💰 БАЛАНС =====================
 
-        await save_reading(user_id, message.text, cards, reading)
+@router.message(F.text == "💰 Баланс")
+async def balance_handler(message: types.Message):
+    balance = await get_balance(message.from_user.id)
 
-        await message.answer(reading)
+    await message.answer(
+        f"💰 Ваш баланс: {balance}",
+        reply_markup=get_main_keyboard()
+    )
 
-        return
+
+# ===================== 👤 ПРОФИЛЬ =====================
+
+@router.message(F.text == "👤 Профиль")
+async def profile_handler(message: types.Message):
+    user = await get_user(message.from_user.id)
+    balance = await get_display_balance(user)
+
+    await message.answer(
+        f"👤 Профиль\n\n"
+        f"Имя: {user.name}\n"
+        f"Дата рождения: {user.birthdate}\n"
+        f"Знак: {user.zodiac}\n"
+        f"Баланс: {balance}",
+        reply_markup=get_main_keyboard()
+    )
+
+
+# ===================== 🔙 МЕНЮ =====================
+
+@router.message(F.text == "🔙 Меню")
+async def back_to_menu(message: types.Message):
+    await message.answer("Главное меню:", reply_markup=get_main_keyboard())
