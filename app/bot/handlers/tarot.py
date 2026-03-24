@@ -3,21 +3,9 @@ from aiogram import Router, types, F
 from app.services.tarot.engine import draw_cards
 from app.providers.llm.openai import generate_tarot_answer
 from app.bot.handlers.start import get_main_keyboard
-from app.core.config import settings
+from app.services.user_service import get_balance, change_balance
 
 router = Router()
-
-# ===================== 💾 БАЛАНС =====================
-
-user_balances = {}
-
-def get_balance(user_id: int) -> int:
-    if user_id == settings.ADMIN_ID:
-        return 9999
-    return user_balances.get(user_id, 3)
-
-def change_balance(user_id: int, amount: int):
-    user_balances[user_id] = get_balance(user_id) + amount
 
 
 # ===================== 🧠 СОСТОЯНИЕ =====================
@@ -47,7 +35,7 @@ def get_after_reading_keyboard():
 
 @router.message(F.text == "💰 Баланс")
 async def balance_handler(message: types.Message):
-    balance = get_balance(message.from_user.id)
+    balance = await get_balance(message.from_user.id)
 
     keyboard = types.ReplyKeyboardMarkup(
         keyboard=[
@@ -72,16 +60,18 @@ async def buy_handler(message: types.Message):
     user_id = message.from_user.id
 
     if "10" in message.text:
-        change_balance(user_id, 10)
+        await change_balance(user_id, 10)
         text = "✅ +10 кредитов зачислено!"
     elif "30" in message.text:
-        change_balance(user_id, 30)
+        await change_balance(user_id, 30)
         text = "🔥 +30 кредитов зачислено!"
     else:
         text = "Ошибка пакета"
 
+    balance = await get_balance(user_id)
+
     await message.answer(
-        f"{text}\n\n💰 Новый баланс: {get_balance(user_id)}",
+        f"{text}\n\n💰 Новый баланс: {balance}",
         reply_markup=get_main_keyboard()
     )
 
@@ -107,11 +97,11 @@ async def card_of_the_day(message: types.Message):
 async def tarot_no_question(message: types.Message):
     user_id = message.from_user.id
 
-    if get_balance(user_id) <= 0:
+    if await get_balance(user_id) <= 0:
         await message.answer("❌ Недостаточно кредитов. Зайди в баланс.")
         return
 
-    change_balance(user_id, -1)
+    await change_balance(user_id, -1)
 
     cards = draw_cards(3)
 
@@ -146,8 +136,8 @@ async def ask_question(message: types.Message):
     waiting_for_question.add(message.from_user.id)
 
     await message.answer(
-        "Напиши свой вопрос ✨\n\n"
-        "Я учту его в раскладе."
+        "Напишите ваш вопрос ✨\n\n"
+        "Я внимательно посмотрю карты."
     )
 
 
@@ -157,11 +147,11 @@ async def ask_question(message: types.Message):
 async def extra_card(message: types.Message):
     user_id = message.from_user.id
 
-    if get_balance(user_id) <= 0:
+    if await get_balance(user_id) <= 0:
         await message.answer("❌ Недостаточно кредитов.")
         return
 
-    change_balance(user_id, -1)
+    await change_balance(user_id, -1)
 
     card = draw_cards(1)[0]
 
@@ -209,15 +199,14 @@ async def love_stub(message: types.Message):
 async def handle_text(message: types.Message):
     user_id = message.from_user.id
 
-    # 👉 если ждём вопрос
     if user_id in waiting_for_question:
         waiting_for_question.remove(user_id)
 
-        if get_balance(user_id) <= 0:
+        if await get_balance(user_id) <= 0:
             await message.answer("❌ Недостаточно кредитов.")
             return
 
-        change_balance(user_id, -1)
+        await change_balance(user_id, -1)
 
         cards = draw_cards(3)
 
@@ -243,5 +232,4 @@ async def handle_text(message: types.Message):
 
         return
 
-    # 👉 игнор всего лишнего
     return
