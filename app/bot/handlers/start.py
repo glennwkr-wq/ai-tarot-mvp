@@ -1,22 +1,18 @@
-from aiogram import Router, types, F
+from aiogram import Router, types
 from aiogram.filters import CommandStart
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import StatesGroup, State
 
+from app.services.user_service import get_user, create_user
+
 router = Router()
 
 
-# ===== FSM состояния =====
 class Onboarding(StatesGroup):
     waiting_for_name = State()
     waiting_for_birthdate = State()
 
 
-# ===== временное хранилище (пока без БД) =====
-users = {}
-
-
-# ===== клавиатура =====
 def get_main_keyboard():
     return types.ReplyKeyboardMarkup(
         keyboard=[
@@ -41,21 +37,18 @@ def get_main_keyboard():
     )
 
 
-# ===== старт =====
 @router.message(CommandStart())
 async def start_handler(message: types.Message, state: FSMContext):
-    user_id = message.from_user.id
+    user = await get_user(message.from_user.id)
 
-    # если пользователь уже есть → меню
-    if user_id in users:
+    if user:
         await message.answer(
-            f"С возвращением, {users[user_id]['name']} 🌙\n\n"
+            f"С возвращением, {user.name} 🌙\n\n"
             "Что вас сегодня интересует?",
             reply_markup=get_main_keyboard()
         )
         return
 
-    # onboarding старт
     await message.answer(
         "🔮 <b>AI Таролог</b>\n\n"
         "Перед началом важно:\n"
@@ -70,12 +63,9 @@ async def start_handler(message: types.Message, state: FSMContext):
     await state.set_state(Onboarding.waiting_for_name)
 
 
-# ===== имя =====
 @router.message(Onboarding.waiting_for_name)
 async def get_name(message: types.Message, state: FSMContext):
-    name = message.text.strip()
-
-    await state.update_data(name=name)
+    await state.update_data(name=message.text.strip())
 
     await message.answer(
         "Введите вашу дату рождения в формате ДД.ММ.ГГГГ\n\n"
@@ -85,24 +75,20 @@ async def get_name(message: types.Message, state: FSMContext):
     await state.set_state(Onboarding.waiting_for_birthdate)
 
 
-# ===== дата рождения =====
 @router.message(Onboarding.waiting_for_birthdate)
 async def get_birthdate(message: types.Message, state: FSMContext):
-    birthdate = message.text.strip()
-
     data = await state.get_data()
-    name = data["name"]
 
+    name = data["name"]
+    birthdate = message.text.strip()
     zodiac = calculate_zodiac(birthdate)
 
-    user_id = message.from_user.id
-
-    users[user_id] = {
-        "name": name,
-        "birthdate": birthdate,
-        "zodiac": zodiac,
-        "balance": 10  # стартовые кредиты
-    }
+    await create_user(
+        telegram_id=message.from_user.id,
+        name=name,
+        birthdate=birthdate,
+        zodiac=zodiac
+    )
 
     await state.clear()
 
@@ -115,7 +101,6 @@ async def get_birthdate(message: types.Message, state: FSMContext):
     )
 
 
-# ===== зодиак =====
 def calculate_zodiac(date_str: str) -> str:
     try:
         day, month, _ = map(int, date_str.split("."))

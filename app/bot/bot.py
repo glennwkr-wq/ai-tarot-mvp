@@ -7,6 +7,10 @@ from aiogram.fsm.storage.memory import MemoryStorage
 from app.core.config import settings
 from app.bot.handlers import start, tarot, menu
 
+# ✅ правильные импорты
+from app.db.base import Base
+from app.db.session import engine
+
 
 session = AiohttpSession()
 
@@ -15,16 +19,18 @@ bot = Bot(
     session=session,
 )
 
-# 👇 добавили FSM storage
 dp = Dispatcher(storage=MemoryStorage())
 
-# роутеры
 dp.include_router(start.router)
 dp.include_router(menu.router)
 dp.include_router(tarot.router)
 
 
 async def main():
+    # ✅ создаём таблицы
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)
+
     me = await bot.get_me()
     print(f"✅ Бот авторизован как @{me.username}")
 
