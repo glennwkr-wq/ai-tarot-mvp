@@ -2,6 +2,7 @@ import asyncio
 
 from aiogram import Bot, Dispatcher
 from aiogram.client.session.aiohttp import AiohttpSession
+from aiogram.fsm.storage.memory import MemoryStorage
 
 from app.core.config import settings
 from app.bot.handlers import start, tarot, menu
@@ -14,8 +15,10 @@ bot = Bot(
     session=session,
 )
 
-dp = Dispatcher()
+# 👇 добавили FSM storage
+dp = Dispatcher(storage=MemoryStorage())
 
+# роутеры
 dp.include_router(start.router)
 dp.include_router(menu.router)
 dp.include_router(tarot.router)
