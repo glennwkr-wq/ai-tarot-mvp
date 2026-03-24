@@ -15,6 +15,9 @@ class User(Base):
     birthdate = Column(String)
     zodiac = Column(String)
 
-    balance = Column(Integer, default=10)
+    balance = Column(Integer, default=30)
+
+    last_daily_bonus = Column(DateTime, nullable=True)
+    last_card_of_day = Column(DateTime, nullable=True)
 
     created_at = Column(DateTime, default=datetime.utcnow)

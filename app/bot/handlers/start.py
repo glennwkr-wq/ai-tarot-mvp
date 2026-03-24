@@ -116,7 +116,7 @@ async def get_birthdate(message: types.Message, state: FSMContext):
     await message.answer(
         f"✨ Приятно познакомиться, {name}\n\n"
         f"Ваш знак: {zodiac}\n"
-        f"🎁 Вам начислено 10 кредитов\n\n"
+        f"🎁 Вам начислено 30 кредитов\n\n"
         "🔮 Можем начать работу с картами",
         reply_markup=get_main_keyboard()
     )

@@ -5,7 +5,14 @@ from aiogram.fsm.state import StatesGroup, State
 from app.services.tarot.engine import draw_cards
 from app.providers.llm.openai import generate_tarot_answer
 from app.bot.handlers.start import get_main_keyboard
-from app.services.user_service import get_balance, change_balance, get_user, get_display_balance
+from app.services.user_service import (
+    get_balance,
+    change_balance,
+    get_user,
+    get_display_balance,
+    can_use_free_card_today,
+    mark_card_of_day_used,
+)
 from app.services.reading_service import save_reading
 
 router = Router()
@@ -82,6 +89,21 @@ async def love_reading(message: types.Message):
 
 @router.message(F.text == "🃏 Карта дня")
 async def card_of_day(message: types.Message):
+    user = await get_user(message.from_user.id)
+
+    if not user:
+        await message.answer("⚠️ Пользователь не найден. Нажмите /start")
+        return
+
+    is_free_today = await can_use_free_card_today(user)
+
+    if not is_free_today:
+        balance = await get_balance(message.from_user.id)
+        if balance < 10:
+            await message.answer("❌ Недостаточно кредитов.")
+            return
+        await change_balance(message.from_user.id, -10)
+
     cards = draw_cards(1)
     card = cards[0]
 
@@ -100,6 +122,8 @@ async def card_of_day(message: types.Message):
             f"✨ {card['general']}\n\n"
             f"💡 Совет: {card['advice']}"
         )
+
+    await mark_card_of_day_used(message.from_user.id)
 
     await message.answer(
         reading,
@@ -165,7 +189,9 @@ async def back_to_menu(message: types.Message, state: FSMContext):
 async def process_reading(message: types.Message, question: str, mode: str = "general"):
     user_id = message.from_user.id
 
-    if await get_balance(user_id) <= 0:
+    balance = await get_balance(user_id)
+
+    if balance < 10:
         await message.answer("❌ Недостаточно кредитов.")
         return
 
@@ -177,15 +203,21 @@ async def process_reading(message: types.Message, question: str, mode: str = "ge
         cards_text = "\n".join([f"• {c['name']}" for c in cards])
         await message.answer(f"🃏 Выпали карты:\n{cards_text}")
 
-        for card in cards:
-            await message.answer_photo(
-                photo=card["image_id"],
-                caption=f"🃏 {card['name']}"
+        media = []
+
+        for i, card in enumerate(cards):
+            media.append(
+                types.InputMediaPhoto(
+                    media=card["image_id"],
+                    caption=f"🃏 {card['name']}" if i == 0 else None
+                )
             )
+
+        await message.answer_media_group(media)
 
         reading = await generate_tarot_answer(question, cards, mode=mode)
 
-        await change_balance(user_id, -1)
+        await change_balance(user_id, -10)
 
     except Exception as e:
         print(f"Tarot error: {e}")
