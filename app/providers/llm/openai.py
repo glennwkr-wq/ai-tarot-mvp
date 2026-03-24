@@ -124,7 +124,7 @@ async def generate_tarot_answer(question: str, cards: list[dict], mode: str = "g
 КОНТЕКСТ:
 {context}
 """
-        max_tokens = 300
+        max_tokens = 450
 
     response = client.chat.completions.create(
         model="gpt-4o-mini",

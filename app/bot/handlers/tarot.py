@@ -209,7 +209,6 @@ async def process_reading(message: types.Message, question: str, mode: str = "ge
             media.append(
                 types.InputMediaPhoto(
                     media=card["image_id"],
-                    caption=f"🃏 {card['name']}" if i == 0 else None
                 )
             )
 
