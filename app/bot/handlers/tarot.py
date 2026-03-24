@@ -56,48 +56,6 @@ async def skip_question(message: types.Message):
     await process_reading(message, "Общий расклад")
 
 
-# ===================== 💬 ВОПРОС =====================
-
-@router.message()
-async def handle_text(message: types.Message):
-    user_id = message.from_user.id
-
-    if user_id not in waiting_for_question:
-        return
-
-    waiting_for_question.remove(user_id)
-
-    await process_reading(message, message.text)
-
-
-# ===================== 🧠 ОБЩАЯ ЛОГИКА =====================
-
-async def process_reading(message: types.Message, question: str):
-    user_id = message.from_user.id
-
-    if await get_balance(user_id) <= 0:
-        await message.answer("❌ Недостаточно кредитов.")
-        return
-
-    await change_balance(user_id, -1)
-
-    cards = draw_cards(3)
-
-    await message.answer("🔮 Смотрю карты...")
-
-    try:
-        reading = await generate_tarot_answer(question, cards)
-    except:
-        reading = (
-            "Карты указывают на важный период.\n\n"
-            "Сейчас многое зависит от ваших решений."
-        )
-
-    await save_reading(user_id, question, cards, reading)
-
-    await message.answer(reading, reply_markup=get_after_reading_keyboard())
-
-
 # ===================== ❤️ ОТНОШЕНИЯ =====================
 
 @router.message(F.text == "❤️ На отношения")
@@ -113,7 +71,13 @@ async def card_of_day(message: types.Message):
     card = cards[0]
 
     await message.answer(
-        f"🃏 <b>Карта дня — {card['name']}</b>\n\n{card['meaning']}",
+        f"""
+🃏 <b>Карта дня — {card['name']}</b>
+
+✨ {card['general']}
+
+💡 Совет: {card['advice']}
+""",
         parse_mode="HTML",
         reply_markup=get_main_keyboard()
     )
@@ -153,3 +117,48 @@ async def profile_handler(message: types.Message):
 @router.message(F.text == "🔙 Меню")
 async def back_to_menu(message: types.Message):
     await message.answer("Главное меню:", reply_markup=get_main_keyboard())
+
+
+# ===================== 🧠 ОБЩАЯ ЛОГИКА =====================
+
+async def process_reading(message: types.Message, question: str):
+    user_id = message.from_user.id
+
+    if await get_balance(user_id) <= 0:
+        await message.answer("❌ Недостаточно кредитов.")
+        return
+
+    await message.answer("🔮 Смотрю карты...")
+
+    try:
+        cards = draw_cards(3)
+
+        cards_text = "\n".join([f"• {c['name']}" for c in cards])
+        await message.answer(f"🃏 Выпали карты:\n{cards_text}")
+
+        reading = await generate_tarot_answer(question, cards)
+
+        await change_balance(user_id, -1)
+
+    except Exception as e:
+        print(f"Tarot error: {e}")
+        await message.answer("⚠️ Произошла ошибка. Попробуйте позже.")
+        return
+
+    await save_reading(user_id, question, cards, reading)
+
+    await message.answer(reading, reply_markup=get_after_reading_keyboard())
+
+
+# ===================== 💬 ВОПРОС (ПОСЛЕДНИЙ ХЕНДЛЕР!) =====================
+
+@router.message()
+async def handle_text(message: types.Message):
+    user_id = message.from_user.id
+
+    if user_id not in waiting_for_question:
+        return
+
+    waiting_for_question.remove(user_id)
+
+    await process_reading(message, message.text)

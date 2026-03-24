@@ -1,6 +1,6 @@
-from openai import OpenAI
-from app.core.config import settings
 from app.services.tarot.engine import build_interpretation_context
+from app.core.config import settings
+from openai import OpenAI
 
 client = OpenAI(api_key=settings.OPENAI_API_KEY)
 
@@ -9,32 +9,36 @@ async def generate_tarot_answer(question: str, cards: list[dict]) -> str:
     context = build_interpretation_context(cards, question)
 
     prompt = f"""
-Ты опытный таролог.
+Ты профессиональный таролог.
 
-Твоя задача — сделать интерпретацию ТОЛЬКО на основе переданных значений карт.
+Ты НЕ придумываешь значения карт.
+Ты работаешь ТОЛЬКО с данными, которые переданы.
 
-❗ ВАЖНО:
-- не придумывай значения карт
-- не добавляй эзотерический мусор
-- не давай категоричных предсказаний
-- говори мягко и уважительно
+Твоя задача:
+объединить значения карт в связный расклад.
 
 СТИЛЬ:
 - спокойный
+- мягкий
 - немного мистический
-- как живой человек
-- без пафоса и воды
+- без категоричных предсказаний
 
 СТРУКТУРА:
 
 🔮 Расклад
 
-🌒 Прошлое — карта
-⚡ Настоящее — карта
-🌕 Будущее — карта
+🌒 Прошлое
+⚡ Настоящее
+🌕 Будущее
 
 🧭 Вывод:
-кратко и по делу (1-2 абзаца)
+1-2 абзаца
+
+ВАЖНО:
+- используй только переданные значения
+- не выдумывай символику
+- адаптируй под вопрос
+- не делай длинный текст
 
 КОНТЕКСТ:
 {context}
@@ -43,8 +47,8 @@ async def generate_tarot_answer(question: str, cards: list[dict]) -> str:
     response = client.chat.completions.create(
         model="gpt-4o-mini",
         messages=[{"role": "user", "content": prompt}],
-        max_tokens=300,  # 👈 важно
-        temperature=0.8,
+        max_tokens=300,
+        temperature=0.7,
     )
 
     return response.choices[0].message.content

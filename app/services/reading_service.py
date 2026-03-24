@@ -9,13 +9,13 @@ async def save_reading(telegram_id: int, question: str, cards: list, answer: str
     user = await get_user(telegram_id)
 
     if not user:
-        return  # защита
+        return
 
     async with SessionLocal() as session:
         reading = Reading(
-            user_id=user.id,  # 🔥 ВАЖНО: используем ID из БД
+            user_id=user.id,
             question=question,
-            cards=json.dumps(cards),
+            cards=json.dumps(cards, ensure_ascii=False),
             answer=answer
         )
         session.add(reading)
