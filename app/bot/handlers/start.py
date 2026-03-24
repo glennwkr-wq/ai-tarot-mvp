@@ -1,9 +1,14 @@
-from aiogram import Router, types
+from aiogram import Router, types, F
 from aiogram.filters import CommandStart
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import StatesGroup, State
 
-from app.services.user_service import get_user, create_user
+from app.services.user_service import (
+    get_user,
+    create_user,
+    update_user_name,
+    update_user_birthdate,
+)
 
 router = Router()
 
@@ -11,6 +16,11 @@ router = Router()
 class Onboarding(StatesGroup):
     waiting_for_name = State()
     waiting_for_birthdate = State()
+
+
+class SettingsStates(StatesGroup):
+    waiting_for_new_name = State()
+    waiting_for_new_birthdate = State()
 
 
 def get_main_keyboard():
@@ -24,13 +34,23 @@ def get_main_keyboard():
                 types.KeyboardButton(text="❤️ На отношения"),
             ],
             [
-                types.KeyboardButton(text="📜 История"),
                 types.KeyboardButton(text="👤 Профиль"),
+                types.KeyboardButton(text="💰 Баланс"),
             ],
             [
-                types.KeyboardButton(text="💰 Баланс"),
                 types.KeyboardButton(text="⚙️ Настройки"),
             ],
+        ],
+        resize_keyboard=True
+    )
+
+
+def get_settings_keyboard():
+    return types.ReplyKeyboardMarkup(
+        keyboard=[
+            [types.KeyboardButton(text="✏️ Сменить имя")],
+            [types.KeyboardButton(text="📅 Сменить дату рождения")],
+            [types.KeyboardButton(text="🔙 Меню")],
         ],
         resize_keyboard=True
     )
@@ -55,7 +75,7 @@ async def start_handler(message: types.Message, state: FSMContext):
         "Перед началом важно:\n"
         "— Я не даю точных предсказаний будущего\n"
         "— Я не заменяю врача, юриста или психолога\n"
-        "— Все ответы носят интерпретационный характер\n\n"
+        "— Ответы бота не являются призывом к действию\n\n"
         "✨ Продолжая, вы подтверждаете, что вам есть 18 лет\n\n"
         "Как я могу к вам обращаться?",
         parse_mode="HTML"
@@ -99,6 +119,78 @@ async def get_birthdate(message: types.Message, state: FSMContext):
         f"🎁 Вам начислено 10 кредитов\n\n"
         "🔮 Можем начать работу с картами",
         reply_markup=get_main_keyboard()
+    )
+
+
+# ===================== ⚙️ НАСТРОЙКИ =====================
+
+@router.message(F.text == "⚙️ Настройки")
+async def settings_handler(message: types.Message, state: FSMContext):
+    await state.clear()
+
+    user = await get_user(message.from_user.id)
+
+    await message.answer(
+        f"⚙️ Настройки\n\n"
+        f"Текущее имя: {user.name}\n"
+        f"Текущая дата рождения: {user.birthdate}\n\n"
+        f"Что хотите изменить?",
+        reply_markup=get_settings_keyboard()
+    )
+
+
+@router.message(F.text == "✏️ Сменить имя")
+async def settings_change_name_start(message: types.Message, state: FSMContext):
+    await state.set_state(SettingsStates.waiting_for_new_name)
+
+    await message.answer(
+        "Введите новое имя:",
+        reply_markup=types.ReplyKeyboardMarkup(
+            keyboard=[[types.KeyboardButton(text="🔙 Меню")]],
+            resize_keyboard=True
+        )
+    )
+
+
+@router.message(SettingsStates.waiting_for_new_name, F.text & ~F.text.in_(["🔙 Меню"]))
+async def settings_change_name_finish(message: types.Message, state: FSMContext):
+    new_name = message.text.strip()
+
+    await update_user_name(message.from_user.id, new_name)
+    await state.clear()
+
+    await message.answer(
+        f"✅ Имя обновлено: {new_name}",
+        reply_markup=get_settings_keyboard()
+    )
+
+
+@router.message(F.text == "📅 Сменить дату рождения")
+async def settings_change_birthdate_start(message: types.Message, state: FSMContext):
+    await state.set_state(SettingsStates.waiting_for_new_birthdate)
+
+    await message.answer(
+        "Введите новую дату рождения в формате ДД.ММ.ГГГГ\n\n"
+        "Например: 12.05.1995",
+        reply_markup=types.ReplyKeyboardMarkup(
+            keyboard=[[types.KeyboardButton(text="🔙 Меню")]],
+            resize_keyboard=True
+        )
+    )
+
+
+@router.message(SettingsStates.waiting_for_new_birthdate, F.text & ~F.text.in_(["🔙 Меню"]))
+async def settings_change_birthdate_finish(message: types.Message, state: FSMContext):
+    new_birthdate = message.text.strip()
+    zodiac = calculate_zodiac(new_birthdate)
+
+    await update_user_birthdate(message.from_user.id, new_birthdate, zodiac)
+    await state.clear()
+
+    await message.answer(
+        f"✅ Дата рождения обновлена: {new_birthdate}\n"
+        f"Ваш знак: {zodiac}",
+        reply_markup=get_settings_keyboard()
     )
 
 

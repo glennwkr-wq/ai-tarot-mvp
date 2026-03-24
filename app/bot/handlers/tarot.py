@@ -41,7 +41,7 @@ def get_after_reading_keyboard():
 
 # ===================== 🔮 СТАРТ РАСКЛАДА =====================
 
-@router.message(F.text == "🔮 Расклад")
+@router.message(F.text.in_(["🔮 Расклад", "🔮 Новый расклад"]))
 async def start_spread(message: types.Message, state: FSMContext):
     await state.set_state(TarotStates.waiting_for_question)
 
@@ -57,22 +57,25 @@ async def start_spread(message: types.Message, state: FSMContext):
 @router.message(F.text == "⏭ Пропустить")
 async def skip_question(message: types.Message, state: FSMContext):
     await state.clear()
-    await process_reading(message, "Общий расклад")
+    await process_reading(message, "Общий расклад", mode="general")
 
 
 # ===================== 💬 ВОПРОС =====================
 
-@router.message(TarotStates.waiting_for_question)
+@router.message(
+    TarotStates.waiting_for_question,
+    F.text & ~F.text.in_(["⏭ Пропустить", "🔙 Меню"])
+)
 async def handle_question(message: types.Message, state: FSMContext):
     await state.clear()
-    await process_reading(message, message.text)
+    await process_reading(message, message.text, mode="general")
 
 
 # ===================== ❤️ ОТНОШЕНИЯ =====================
 
 @router.message(F.text == "❤️ На отношения")
 async def love_reading(message: types.Message):
-    await process_reading(message, "Расклад на отношения")
+    await process_reading(message, "Расклад на отношения", mode="love")
 
 
 # ===================== 🃏 КАРТА ДНЯ =====================
@@ -84,13 +87,22 @@ async def card_of_day(message: types.Message):
 
     await message.answer_photo(
         photo=card["image_id"],
-        caption=f"""
-🃏 <b>{card['name']}</b>
+        caption=f"🃏 <b>{card['name']}</b>",
+        parse_mode="HTML"
+    )
 
-✨ {card['general']}
+    try:
+        reading = await generate_tarot_answer("Карта дня", cards, mode="daily")
+    except Exception as e:
+        print(f"Card of day error: {e}")
+        reading = (
+            f"🃏 <b>Карта дня — {card['name']}</b>\n\n"
+            f"✨ {card['general']}\n\n"
+            f"💡 Совет: {card['advice']}"
+        )
 
-💡 Совет: {card['advice']}
-""",
+    await message.answer(
+        reading,
         parse_mode="HTML",
         reply_markup=get_main_keyboard()
     )
@@ -125,6 +137,17 @@ async def profile_handler(message: types.Message):
     )
 
 
+# ===================== 📜 ИСТОРИЯ УБРАНА =====================
+
+@router.message(F.text == "📜 История")
+async def history_removed(message: types.Message):
+    await message.answer(
+        "📜 Раздел истории убран из бота.\n\n"
+        "Сейчас мы сосредоточены на качестве самих раскладов.",
+        reply_markup=get_main_keyboard()
+    )
+
+
 # ===================== 🔙 МЕНЮ =====================
 
 @router.message(F.text == "🔙 Меню")
@@ -139,7 +162,7 @@ async def back_to_menu(message: types.Message, state: FSMContext):
 
 # ===================== 🧠 ОБЩАЯ ЛОГИКА =====================
 
-async def process_reading(message: types.Message, question: str):
+async def process_reading(message: types.Message, question: str, mode: str = "general"):
     user_id = message.from_user.id
 
     if await get_balance(user_id) <= 0:
@@ -151,19 +174,16 @@ async def process_reading(message: types.Message, question: str):
     try:
         cards = draw_cards(3)
 
-        # 👉 1. Названия карт
         cards_text = "\n".join([f"• {c['name']}" for c in cards])
         await message.answer(f"🃏 Выпали карты:\n{cards_text}")
 
-        # 👉 2. Фото карт
         for card in cards:
             await message.answer_photo(
                 photo=card["image_id"],
                 caption=f"🃏 {card['name']}"
             )
 
-        # 👉 3. AI-интерпретация
-        reading = await generate_tarot_answer(question, cards)
+        reading = await generate_tarot_answer(question, cards, mode=mode)
 
         await change_balance(user_id, -1)
 

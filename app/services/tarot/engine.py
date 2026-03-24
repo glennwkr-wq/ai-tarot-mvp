@@ -6,8 +6,13 @@ def draw_cards(n: int = 3) -> list[dict]:
     return random.sample(CARDS, n)
 
 
-def build_interpretation_context(cards: list[dict], question: str) -> str:
-    positions = ["Прошлое", "Настоящее", "Будущее"]
+def build_interpretation_context(cards: list[dict], question: str, mode: str = "general") -> str:
+    if mode == "love":
+        positions = ["Вы", "Партнер", "Динамика между вами"]
+    elif mode == "daily":
+        positions = ["Карта дня"]
+    else:
+        positions = ["Прошлое", "Настоящее", "Будущее"]
 
     lines = []
 
@@ -29,6 +34,9 @@ def build_interpretation_context(cards: list[dict], question: str) -> str:
 Карьера:
 {card['career']}
 
+О себе:
+{card['self']}
+
 Совет:
 {card['advice']}
 """
@@ -37,6 +45,9 @@ def build_interpretation_context(cards: list[dict], question: str) -> str:
     return f"""
 Вопрос пользователя:
 {question}
+
+Режим:
+{mode}
 
 Карты:
 {''.join(lines)}

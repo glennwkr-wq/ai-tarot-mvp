@@ -27,6 +27,29 @@ async def create_user(telegram_id: int, name: str, birthdate: str, zodiac: str):
         return user
 
 
+async def update_user_name(telegram_id: int, new_name: str):
+    async with SessionLocal() as session:
+        await session.execute(
+            update(User)
+            .where(User.telegram_id == telegram_id)
+            .values(name=new_name)
+        )
+        await session.commit()
+
+
+async def update_user_birthdate(telegram_id: int, new_birthdate: str, new_zodiac: str):
+    async with SessionLocal() as session:
+        await session.execute(
+            update(User)
+            .where(User.telegram_id == telegram_id)
+            .values(
+                birthdate=new_birthdate,
+                zodiac=new_zodiac
+            )
+        )
+        await session.commit()
+
+
 # ===== БАЛАНС =====
 
 async def get_balance(telegram_id: int) -> int:
