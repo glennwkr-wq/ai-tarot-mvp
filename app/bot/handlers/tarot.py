@@ -135,6 +135,16 @@ async def back_to_menu(message: types.Message, state: FSMContext):
         reply_markup=get_main_keyboard()
     )
 
+@router.message(F.photo)
+async def get_file_id(message: types.Message):
+    largest_photo = message.photo[-1]
+
+    await message.answer(
+        f"🆔 file_id:\n<code>{largest_photo.file_id}</code>",
+        parse_mode="HTML"
+    )
+
+    print("PHOTO FILE ID:", largest_photo.file_id)
 
 # ===================== 🧠 ОБЩАЯ ЛОГИКА =====================
 
