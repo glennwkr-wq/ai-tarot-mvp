@@ -5,9 +5,8 @@ from aiogram.client.session.aiohttp import AiohttpSession
 from aiogram.fsm.storage.memory import MemoryStorage
 
 from app.core.config import settings
-from app.bot.handlers import start, tarot, menu
+from app.bot.handlers import start, tarot
 
-# ✅ правильные импорты
 from app.db.base import Base
 from app.db.session import engine
 
@@ -21,13 +20,12 @@ bot = Bot(
 
 dp = Dispatcher(storage=MemoryStorage())
 
+# ❗ УБРАЛИ menu.router
 dp.include_router(start.router)
-dp.include_router(menu.router)
 dp.include_router(tarot.router)
 
 
 async def main():
-    # ✅ создаём таблицы
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
 
