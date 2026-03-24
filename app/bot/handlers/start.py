@@ -38,6 +38,8 @@ def get_main_keyboard():
 
 @router.message(CommandStart())
 async def start_handler(message: types.Message, state: FSMContext):
+    await state.clear()
+
     user = await get_user(message.from_user.id)
 
     if user:

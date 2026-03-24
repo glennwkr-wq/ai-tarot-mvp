@@ -1,4 +1,6 @@
 from aiogram import Router, types, F
+from aiogram.fsm.context import FSMContext
+from aiogram.fsm.state import StatesGroup, State
 
 from app.services.tarot.engine import draw_cards
 from app.providers.llm.openai import generate_tarot_answer
@@ -8,8 +10,14 @@ from app.services.reading_service import save_reading
 
 router = Router()
 
-waiting_for_question = set()
 
+# ===================== FSM =====================
+
+class TarotStates(StatesGroup):
+    waiting_for_question = State()
+
+
+# ===================== KEYBOARDS =====================
 
 def get_skip_keyboard():
     return types.ReplyKeyboardMarkup(
@@ -34,8 +42,8 @@ def get_after_reading_keyboard():
 # ===================== 🔮 СТАРТ РАСКЛАДА =====================
 
 @router.message(F.text == "🔮 Расклад")
-async def start_spread(message: types.Message):
-    waiting_for_question.add(message.from_user.id)
+async def start_spread(message: types.Message, state: FSMContext):
+    await state.set_state(TarotStates.waiting_for_question)
 
     await message.answer(
         "✨ Если у вас есть вопрос — напишите его.\n\n"
@@ -47,13 +55,17 @@ async def start_spread(message: types.Message):
 # ===================== ⏭ ПРОПУСК =====================
 
 @router.message(F.text == "⏭ Пропустить")
-async def skip_question(message: types.Message):
-    user_id = message.from_user.id
-
-    if user_id in waiting_for_question:
-        waiting_for_question.remove(user_id)
-
+async def skip_question(message: types.Message, state: FSMContext):
+    await state.clear()
     await process_reading(message, "Общий расклад")
+
+
+# ===================== 💬 ВОПРОС =====================
+
+@router.message(TarotStates.waiting_for_question)
+async def handle_question(message: types.Message, state: FSMContext):
+    await state.clear()
+    await process_reading(message, message.text)
 
 
 # ===================== ❤️ ОТНОШЕНИЯ =====================
@@ -115,8 +127,13 @@ async def profile_handler(message: types.Message):
 # ===================== 🔙 МЕНЮ =====================
 
 @router.message(F.text == "🔙 Меню")
-async def back_to_menu(message: types.Message):
-    await message.answer("Главное меню:", reply_markup=get_main_keyboard())
+async def back_to_menu(message: types.Message, state: FSMContext):
+    await state.clear()
+
+    await message.answer(
+        "Главное меню:",
+        reply_markup=get_main_keyboard()
+    )
 
 
 # ===================== 🧠 ОБЩАЯ ЛОГИКА =====================
@@ -148,17 +165,3 @@ async def process_reading(message: types.Message, question: str):
     await save_reading(user_id, question, cards, reading)
 
     await message.answer(reading, reply_markup=get_after_reading_keyboard())
-
-
-# ===================== 💬 ВОПРОС (ПОСЛЕДНИЙ ХЕНДЛЕР!) =====================
-
-@router.message()
-async def handle_text(message: types.Message):
-    user_id = message.from_user.id
-
-    if user_id not in waiting_for_question:
-        return
-
-    waiting_for_question.remove(user_id)
-
-    await process_reading(message, message.text)
