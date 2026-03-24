@@ -82,9 +82,10 @@ async def card_of_day(message: types.Message):
     cards = draw_cards(1)
     card = cards[0]
 
-    await message.answer(
-        f"""
-🃏 <b>Карта дня — {card['name']}</b>
+    await message.answer_photo(
+        photo=card["image_id"],
+        caption=f"""
+🃏 <b>{card['name']}</b>
 
 ✨ {card['general']}
 
@@ -135,16 +136,6 @@ async def back_to_menu(message: types.Message, state: FSMContext):
         reply_markup=get_main_keyboard()
     )
 
-@router.message(F.photo)
-async def get_file_id(message: types.Message):
-    largest_photo = message.photo[-1]
-
-    await message.answer(
-        f"🆔 file_id:\n<code>{largest_photo.file_id}</code>",
-        parse_mode="HTML"
-    )
-
-    print("PHOTO FILE ID:", largest_photo.file_id)
 
 # ===================== 🧠 ОБЩАЯ ЛОГИКА =====================
 
@@ -160,9 +151,18 @@ async def process_reading(message: types.Message, question: str):
     try:
         cards = draw_cards(3)
 
+        # 👉 1. Названия карт
         cards_text = "\n".join([f"• {c['name']}" for c in cards])
         await message.answer(f"🃏 Выпали карты:\n{cards_text}")
 
+        # 👉 2. Фото карт
+        for card in cards:
+            await message.answer_photo(
+                photo=card["image_id"],
+                caption=f"🃏 {card['name']}"
+            )
+
+        # 👉 3. AI-интерпретация
         reading = await generate_tarot_answer(question, cards)
 
         await change_balance(user_id, -1)
