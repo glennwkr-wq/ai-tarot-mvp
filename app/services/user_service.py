@@ -48,3 +48,11 @@ async def change_balance(telegram_id: int, amount: int):
             .values(balance=User.balance + amount)
         )
         await session.commit()
+
+
+# ===== ОТОБРАЖЕНИЕ ПРОФИЛЯ =====
+
+async def get_display_balance(user: User) -> int:
+    if user.telegram_id == settings.ADMIN_ID:
+        return 9999
+    return user.balance
