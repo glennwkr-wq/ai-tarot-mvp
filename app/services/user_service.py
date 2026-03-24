@@ -6,6 +6,10 @@ from app.models.user import User
 from app.core.config import settings
 
 
+def is_admin(telegram_id: int) -> bool:
+    return telegram_id in settings.admin_ids
+
+
 async def get_user(telegram_id: int):
     async with SessionLocal() as session:
         result = await session.execute(
@@ -13,7 +17,7 @@ async def get_user(telegram_id: int):
         )
         user = result.scalar_one_or_none()
 
-        if user and telegram_id != settings.ADMIN_ID:
+        if user and not is_admin(telegram_id):
             await apply_daily_bonus_if_needed(user)
 
         return user
@@ -82,7 +86,7 @@ async def apply_daily_bonus_if_needed(user: User):
 # ===== БАЛАНС =====
 
 async def get_balance(telegram_id: int) -> int:
-    if telegram_id == settings.ADMIN_ID:
+    if is_admin(telegram_id):
         return 9999
 
     user = await get_user(telegram_id)
@@ -90,7 +94,7 @@ async def get_balance(telegram_id: int) -> int:
 
 
 async def change_balance(telegram_id: int, amount: int):
-    if telegram_id == settings.ADMIN_ID:
+    if is_admin(telegram_id):
         return
 
     async with SessionLocal() as session:
@@ -126,6 +130,6 @@ async def mark_card_of_day_used(telegram_id: int):
 # ===== ОТОБРАЖЕНИЕ ПРОФИЛЯ =====
 
 async def get_display_balance(user: User) -> int:
-    if user.telegram_id == settings.ADMIN_ID:
+    if is_admin(user.telegram_id):
         return 9999
     return user.balance
