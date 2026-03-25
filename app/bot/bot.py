@@ -11,6 +11,8 @@ from app.db.base import Base
 from app.db.session import engine
 from app.models import user, reading
 
+from app.services.user_service import check_notifications
+
 
 session = AiohttpSession()
 
@@ -21,9 +23,19 @@ bot = Bot(
 
 dp = Dispatcher(storage=MemoryStorage())
 
-# ❗ УБРАЛИ menu.router
 dp.include_router(start.router)
 dp.include_router(tarot.router)
+
+
+# 👇 ФОНОВАЯ ЗАДАЧА
+async def notification_loop():
+    while True:
+        try:
+            await check_notifications(bot)
+        except Exception as e:
+            print(f"Notification error: {e}")
+
+        await asyncio.sleep(60)  # раз в минуту
 
 
 async def main():
@@ -32,6 +44,9 @@ async def main():
 
     me = await bot.get_me()
     print(f"✅ Бот авторизован как @{me.username}")
+
+    # 👇 запускаем фоновую задачу
+    asyncio.create_task(notification_loop())
 
     await dp.start_polling(bot)
 

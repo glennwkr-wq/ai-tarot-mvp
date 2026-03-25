@@ -83,6 +83,71 @@ async def apply_daily_bonus_if_needed(user: User):
         user.last_daily_bonus = now
 
 
+# ===== УВЕДОМЛЕНИЯ =====
+
+async def check_notifications(bot):
+    async with SessionLocal() as session:
+        result = await session.execute(select(User))
+        users = result.scalars().all()
+
+        now = datetime.utcnow()
+
+        for user in users:
+            # ===== БОНУС =====
+            bonus_available = (
+                user.last_daily_bonus is None
+                or user.last_daily_bonus.date() != now.date()
+            )
+
+            if bonus_available:
+                if (
+                    user.last_bonus_notified is None
+                    or user.last_bonus_notified.date() != now.date()
+                ):
+                    try:
+                        await bot.send_message(
+                            user.telegram_id,
+                            "✨ Для вас открыт новый поток энергии.\n\n"
+                            "💰 Начислено +10 кредитов."
+                        )
+                    except Exception:
+                        continue
+
+                    await session.execute(
+                        update(User)
+                        .where(User.telegram_id == user.telegram_id)
+                        .values(last_bonus_notified=now)
+                    )
+
+            # ===== КАРТА ДНЯ =====
+            card_available = (
+                user.last_card_of_day is None
+                or user.last_card_of_day.date() != now.date()
+            )
+
+            if card_available:
+                if (
+                    user.last_card_notified is None
+                    or user.last_card_notified.date() != now.date()
+                ):
+                    try:
+                        await bot.send_message(
+                            user.telegram_id,
+                            "🃏 Карта дня снова открыта для вас.\n\n"
+                            "Она уже ждёт✨."
+                        )
+                    except Exception:
+                        continue
+
+                    await session.execute(
+                        update(User)
+                        .where(User.telegram_id == user.telegram_id)
+                        .values(last_card_notified=now)
+                    )
+
+        await session.commit()
+
+
 # ===== БАЛАНС =====
 
 async def get_balance(telegram_id: int) -> int:

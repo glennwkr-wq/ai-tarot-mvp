@@ -20,4 +20,8 @@ class User(Base):
     last_daily_bonus = Column(DateTime, nullable=True)
     last_card_of_day = Column(DateTime, nullable=True)
 
+    # 👇 новые поля для уведомлений
+    last_bonus_notified = Column(DateTime, nullable=True)
+    last_card_notified = Column(DateTime, nullable=True)
+
     created_at = Column(DateTime, default=datetime.utcnow)
