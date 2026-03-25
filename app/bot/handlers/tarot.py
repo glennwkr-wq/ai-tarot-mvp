@@ -24,6 +24,32 @@ class TarotStates(StatesGroup):
     waiting_for_question = State()
 
 
+# ===================== MODERATION =====================
+
+def is_question_allowed(text: str) -> bool:
+    text = text.lower()
+
+    banned_keywords = [
+        "умру", "смерть", "когда я умру",
+        "убить", "убийство",
+        "болезнь", "диагноз", "рак",
+        "суицид",
+        "секс", "порно",
+        "наркот",
+        "оскорб", "тварь", "ненавижу"
+    ]
+
+    return not any(word in text for word in banned_keywords)
+
+
+def get_refusal_message() -> str:
+    return (
+        "🔮 Карты не работают с такими вопросами.\n\n"
+        "Но мы можем посмотреть, что сейчас важно для вас "
+        "и куда лучше направить свою энергию."
+    )
+
+
 # ===================== KEYBOARDS =====================
 
 def get_skip_keyboard():
@@ -75,6 +101,14 @@ async def skip_question(message: types.Message, state: FSMContext):
 )
 async def handle_question(message: types.Message, state: FSMContext):
     await state.clear()
+
+    if not is_question_allowed(message.text):
+        await message.answer(
+            get_refusal_message(),
+            reply_markup=get_main_keyboard()
+        )
+        return
+
     await process_reading(message, message.text, mode="general")
 
 
