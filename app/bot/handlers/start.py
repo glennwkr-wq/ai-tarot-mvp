@@ -2,6 +2,7 @@ from aiogram import Router, types, F
 from aiogram.filters import CommandStart
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import StatesGroup, State
+from app.core.config import settings
 
 from app.services.user_service import (
     get_user,
@@ -23,29 +24,36 @@ class SettingsStates(StatesGroup):
     waiting_for_new_birthdate = State()
 
 
-def get_main_keyboard():
-    return types.ReplyKeyboardMarkup(
-        keyboard=[
-            [
-                types.KeyboardButton(text="🔮 Расклад"),
-                types.KeyboardButton(text="🃏 Карта дня"),
-            ],
-            [
-                types.KeyboardButton(text="❤️ На отношения"),
-                types.KeyboardButton(text="💼 На карьеру"),
-            ],
-            [
-                types.KeyboardButton(text="❓ Да / Нет"),
-            ],
-            [
-                types.KeyboardButton(text="👤 Профиль"),
-                types.KeyboardButton(text="💰 Баланс"),
-            ],
-            [
-                types.KeyboardButton(text="⚙️ Настройки"),
-                types.KeyboardButton(text="🛟 Поддержка"),
-            ],
+def get_main_keyboard(user_id: int | None = None):
+    keyboard = [
+        [
+            types.KeyboardButton(text="🔮 Расклад"),
+            types.KeyboardButton(text="🃏 Карта дня"),
         ],
+        [
+            types.KeyboardButton(text="❤️ На отношения"),
+            types.KeyboardButton(text="💼 На карьеру"),
+        ],
+        [
+            types.KeyboardButton(text="❓ Да / Нет"),
+        ],
+        [
+            types.KeyboardButton(text="👤 Профиль"),
+            types.KeyboardButton(text="💰 Баланс"),
+        ],
+        [
+            types.KeyboardButton(text="⚙️ Настройки"),
+            types.KeyboardButton(text="🛟 Поддержка"),
+        ],
+    ]
+
+    if user_id == settings.SUPPORT_ADMIN_ID:
+        keyboard.append(
+            [types.KeyboardButton(text="➕ Начислить кредиты")]
+        )
+
+    return types.ReplyKeyboardMarkup(
+        keyboard=keyboard,
         resize_keyboard=True
     )
 
@@ -71,7 +79,7 @@ async def start_handler(message: types.Message, state: FSMContext):
         await message.answer(
             f"С возвращением, {user.name} 🌙\n\n"
             "Что Вас сегодня интересует?",
-            reply_markup=get_main_keyboard()
+            reply_markup=get_main_keyboard(message.from_user.id)
         )
         return
 
@@ -129,7 +137,7 @@ async def get_birthdate(message: types.Message, state: FSMContext):
         f"Ваш знак: {zodiac}\n"
         f"🎁 Вам начислено 30 кредитов\n\n"
         "🔮 Можем начать работу с картами",
-        reply_markup=get_main_keyboard()
+        reply_markup=get_main_keyboard(message.from_user.id)
     )
 
 

@@ -39,6 +39,9 @@ class YesNoStates(StatesGroup):
 class FollowupStates(StatesGroup):
     waiting_for_input = State()
 
+class AdminCreditStates(StatesGroup):
+    waiting_for_user_id = State()
+    waiting_for_amount = State()
 
 # ===================== MODERATION =====================
 
@@ -122,7 +125,7 @@ async def yesno_process(message: types.Message, state: FSMContext):
     if not is_question_allowed(message.text):
         await message.answer(
             get_refusal_message(),
-            reply_markup=get_main_keyboard()
+            reply_markup=get_main_keyboard(message.from_user.id)
         )
         return
 
@@ -156,7 +159,7 @@ async def yesno_process(message: types.Message, state: FSMContext):
 
     await save_reading(user_id, message.text, cards, reading)
 
-    await message.answer(reading, reply_markup=get_main_keyboard())
+    await message.answer(reading, reply_markup=get_main_keyboard(message.from_user.id))
 
 
 # ===================== 🛟 ПОДДЕРЖКА =====================
@@ -174,6 +177,114 @@ async def support_start(message: types.Message, state: FSMContext):
         )
     )
 
+@router.message(F.text == "➕ Начислить кредиты")
+async def admin_give_credits_start(message: types.Message, state: FSMContext):
+    if message.from_user.id != settings.SUPPORT_ADMIN_ID:
+        return
+
+    await state.set_state(AdminCreditStates.waiting_for_user_id)
+
+    await message.answer(
+        "Введите Telegram ID пользователя, которому нужно начислить кредиты:",
+        reply_markup=types.ReplyKeyboardMarkup(
+            keyboard=[[types.KeyboardButton(text="🔙 Меню")]],
+            resize_keyboard=True
+        )
+    )
+
+@router.message(AdminCreditStates.waiting_for_user_id, F.text & ~F.text.in_(["🔙 Меню"]))
+async def admin_give_credits_get_user_id(message: types.Message, state: FSMContext):
+    if message.from_user.id != settings.SUPPORT_ADMIN_ID:
+        await state.clear()
+        return
+
+    text = message.text.strip()
+
+    if not text.isdigit():
+        await message.answer("⚠️ ID должен быть числом. Попробуйте ещё раз.")
+        return
+
+    target_telegram_id = int(text)
+    user = await get_user(target_telegram_id)
+
+    if not user:
+        await state.clear()
+        await message.answer(
+            "❌ Пользователь с таким Telegram ID не найден.",
+            reply_markup=get_main_keyboard(message.from_user.id)
+        )
+        return
+
+    await state.update_data(target_telegram_id=target_telegram_id)
+
+    await state.set_state(AdminCreditStates.waiting_for_amount)
+
+    await message.answer(
+        f"Пользователь найден: {user.name}\n\n"
+        f"Введите количество кредитов для начисления:",
+        reply_markup=types.ReplyKeyboardMarkup(
+            keyboard=[[types.KeyboardButton(text="🔙 Меню")]],
+            resize_keyboard=True
+        )
+    )
+
+@router.message(AdminCreditStates.waiting_for_amount, F.text & ~F.text.in_(["🔙 Меню"]))
+async def admin_give_credits_finish(message: types.Message, state: FSMContext):
+    if message.from_user.id != settings.SUPPORT_ADMIN_ID:
+        await state.clear()
+        return
+
+    text = message.text.strip()
+
+    if not text.isdigit():
+        await message.answer("⚠️ Сумма должна быть положительным числом. Попробуйте ещё раз.")
+        return
+
+    amount = int(text)
+
+    if amount <= 0:
+        await message.answer("⚠️ Сумма должна быть больше нуля.")
+        return
+
+    data = await state.get_data()
+    target_telegram_id = data.get("target_telegram_id")
+
+    if not target_telegram_id:
+        await state.clear()
+        await message.answer(
+            "⚠️ Не удалось получить ID пользователя. Попробуйте заново.",
+            reply_markup=get_main_keyboard(message.from_user.id)
+        )
+        return
+
+    user = await get_user(target_telegram_id)
+    if not user:
+        await state.clear()
+        await message.answer(
+            "❌ Пользователь больше не найден.",
+            reply_markup=get_main_keyboard(message.from_user.id)
+        )
+        return
+
+    await change_balance(target_telegram_id, amount)
+
+    await state.clear()
+
+    await message.answer(
+        f"✅ Начислено {amount} кредитов пользователю {user.name} ({target_telegram_id}).",
+        reply_markup=get_main_keyboard(message.from_user.id)
+    )
+
+    try:
+        await message.bot.send_message(
+            target_telegram_id,
+            f"🎁 Вам подарок от разработчика!\n\n"
+            f"✨ На ваш баланс начислено {amount} кредитов."
+        )
+    except Exception:
+        await message.answer(
+            "⚠️ Кредиты начислены, но уведомление пользователю отправить не удалось."
+        )
 
 @router.message(SupportStates.waiting_for_message, F.text & ~F.text.in_(["🔙 Меню"]))
 async def support_send(message: types.Message, state: FSMContext):
@@ -193,7 +304,7 @@ async def support_send(message: types.Message, state: FSMContext):
     await message.answer(
         "✨ Ваше сообщение отправлено.\n"
         "Мы скоро ответим Вам.",
-        reply_markup=get_main_keyboard()
+        reply_markup=get_main_keyboard(message.from_user.id)
     )
 
 
@@ -259,7 +370,7 @@ async def handle_question(message: types.Message, state: FSMContext):
     if not is_question_allowed(message.text):
         await message.answer(
             get_refusal_message(),
-            reply_markup=get_main_keyboard()
+            reply_markup=get_main_keyboard(message.from_user.id)
         )
         return
 
@@ -419,7 +530,7 @@ async def card_of_day(message: types.Message):
     await message.answer(
         reading,
         parse_mode="HTML",
-        reply_markup=get_main_keyboard()
+        reply_markup=get_main_keyboard(message.from_user.id)
     )
 
 
@@ -431,7 +542,7 @@ async def balance_handler(message: types.Message):
 
     await message.answer(
         f"💰 Ваш баланс: {balance}",
-        reply_markup=get_main_keyboard()
+        reply_markup=get_main_keyboard(message.from_user.id)
     )
 
 
@@ -448,7 +559,7 @@ async def profile_handler(message: types.Message):
         f"Дата рождения: {user.birthdate}\n"
         f"Знак: {user.zodiac}\n"
         f"Баланс: {balance}",
-        reply_markup=get_main_keyboard()
+        reply_markup=get_main_keyboard(message.from_user.id)
     )
 
 
@@ -459,7 +570,7 @@ async def history_removed(message: types.Message):
     await message.answer(
         "📜 Раздел истории убран из бота.\n\n"
         "Сейчас мы сосредоточены на качестве самих раскладов.",
-        reply_markup=get_main_keyboard()
+        reply_markup=get_main_keyboard(message.from_user.id)
     )
 
 
@@ -471,7 +582,7 @@ async def back_to_menu(message: types.Message, state: FSMContext):
 
     await message.answer(
         "Главное меню:",
-        reply_markup=get_main_keyboard()
+        reply_markup=get_main_keyboard(message.from_user.id)
     )
 
 
