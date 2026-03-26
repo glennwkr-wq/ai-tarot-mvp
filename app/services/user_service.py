@@ -1,13 +1,31 @@
-from datetime import datetime
-from sqlalchemy import select, update
+from datetime import datetime, timedelta
+from sqlalchemy import select, update, desc
 
 from app.db.session import SessionLocal
 from app.models.user import User
+from app.models.reading import Reading
 from app.core.config import settings
 
 
 def is_admin(telegram_id: int) -> bool:
     return telegram_id in settings.admin_ids
+
+
+def has_24_hours_passed(last_time: datetime | None) -> bool:
+    if last_time is None:
+        return False
+    return datetime.utcnow() >= last_time + timedelta(hours=24)
+
+
+async def get_latest_reading(user_id: int):
+    async with SessionLocal() as session:
+        result = await session.execute(
+            select(Reading)
+            .where(Reading.user_id == user_id)
+            .order_by(desc(Reading.created_at))
+            .limit(1)
+        )
+        return result.scalar_one_or_none()
 
 
 async def get_user(telegram_id: int):
@@ -65,9 +83,21 @@ async def update_user_birthdate(telegram_id: int, new_birthdate: str, new_zodiac
 # ===== ЕЖЕДНЕВНЫЙ БОНУС =====
 
 async def apply_daily_bonus_if_needed(user: User):
-    now = datetime.utcnow()
+    latest_reading = await get_latest_reading(user.id)
 
-    if user.last_daily_bonus is None or user.last_daily_bonus.date() != now.date():
+    if latest_reading is None:
+        return
+
+    reading_time = latest_reading.created_at
+
+    bonus_already_given_for_this_reading = (
+        user.last_daily_bonus is not None
+        and user.last_daily_bonus >= reading_time
+    )
+
+    if has_24_hours_passed(reading_time) and not bonus_already_given_for_this_reading:
+        now = datetime.utcnow()
+
         async with SessionLocal() as session:
             await session.execute(
                 update(User)
@@ -93,21 +123,41 @@ async def check_notifications(bot):
         now = datetime.utcnow()
 
         for user in users:
-            # ===== БОНУС =====
-            bonus_available = (
-                user.last_daily_bonus is None
-                or user.last_daily_bonus.date() != now.date()
-            )
+            if is_admin(user.telegram_id):
+                continue
 
-            if bonus_available:
-                if (
-                    user.last_bonus_notified is None
-                    or user.last_bonus_notified.date() != now.date()
-                ):
+            # ===== БОНУС =====
+            latest_reading_result = await session.execute(
+                select(Reading)
+                .where(Reading.user_id == user.id)
+                .order_by(desc(Reading.created_at))
+                .limit(1)
+            )
+            latest_reading = latest_reading_result.scalar_one_or_none()
+
+            if latest_reading is not None:
+                reading_time = latest_reading.created_at
+
+                bonus_already_given_for_this_reading = (
+                    user.last_daily_bonus is not None
+                    and user.last_daily_bonus >= reading_time
+                )
+
+                bonus_already_notified_for_this_reading = (
+                    user.last_bonus_notified is not None
+                    and user.last_bonus_notified >= reading_time
+                )
+
+                bonus_available = (
+                    has_24_hours_passed(reading_time)
+                    and not bonus_already_given_for_this_reading
+                )
+
+                if bonus_available and not bonus_already_notified_for_this_reading:
                     try:
                         await bot.send_message(
                             user.telegram_id,
-                            "✨ Для вас открыт новый поток энергии.\n\n"
+                            "✨ Для вас снова открыт поток энергии.\n\n"
                             "💰 Начислено +10 кредитов."
                         )
                     except Exception:
@@ -121,29 +171,31 @@ async def check_notifications(bot):
 
             # ===== КАРТА ДНЯ =====
             card_available = (
-                user.last_card_of_day is None
-                or user.last_card_of_day.date() != now.date()
+                user.last_card_of_day is not None
+                and has_24_hours_passed(user.last_card_of_day)
             )
 
-            if card_available:
-                if (
-                    user.last_card_notified is None
-                    or user.last_card_notified.date() != now.date()
-                ):
-                    try:
-                        await bot.send_message(
-                            user.telegram_id,
-                            "🃏 Карта дня снова открыта для вас.\n\n"
-                            "Она уже ждёт✨."
-                        )
-                    except Exception:
-                        continue
+            card_already_notified_for_this_cycle = (
+                user.last_card_notified is not None
+                and user.last_card_of_day is not None
+                and user.last_card_notified >= user.last_card_of_day
+            )
 
-                    await session.execute(
-                        update(User)
-                        .where(User.telegram_id == user.telegram_id)
-                        .values(last_card_notified=now)
+            if card_available and not card_already_notified_for_this_cycle:
+                try:
+                    await bot.send_message(
+                        user.telegram_id,
+                        "🃏 Бесплатная карта дня снова доступна.\n\n"
+                        "Она уже ждёт тебя ✨"
                     )
+                except Exception:
+                    continue
+
+                await session.execute(
+                    update(User)
+                    .where(User.telegram_id == user.telegram_id)
+                    .values(last_card_notified=now)
+                )
 
         await session.commit()
 
@@ -174,12 +226,10 @@ async def change_balance(telegram_id: int, amount: int):
 # ===== КАРТА ДНЯ =====
 
 async def can_use_free_card_today(user: User) -> bool:
-    now = datetime.utcnow()
-
     if user.last_card_of_day is None:
         return True
 
-    return user.last_card_of_day.date() != now.date()
+    return has_24_hours_passed(user.last_card_of_day)
 
 
 async def mark_card_of_day_used(telegram_id: int):
