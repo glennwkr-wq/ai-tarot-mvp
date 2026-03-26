@@ -67,7 +67,7 @@ async def start_handler(message: types.Message, state: FSMContext):
     if user:
         await message.answer(
             f"С возвращением, {user.name} 🌙\n\n"
-            "Что вас сегодня интересует?",
+            "Что Вас сегодня интересует?",
             reply_markup=get_main_keyboard()
         )
         return
