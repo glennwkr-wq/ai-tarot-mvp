@@ -105,8 +105,7 @@ async def support_send(message: types.Message, state: FSMContext):
         f"{message.text}"
     )
 
-    for admin_id in settings.admin_ids:
-        await message.bot.send_message(admin_id, text)
+    await message.bot.send_message(settings.SUPPORT_ADMIN_ID, text)
 
     await state.clear()
 

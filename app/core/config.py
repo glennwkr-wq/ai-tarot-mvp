@@ -8,6 +8,9 @@ class Settings(BaseSettings):
     # Можно хранить несколько ID через запятую
     ADMIN_ID: str = "1120321526,757091056"
 
+    # 👇 ДОБАВЛЕНО: отдельный админ для поддержки
+    SUPPORT_ADMIN_ID: int
+
     # 👇 готовим под Postgres (Neon)
     DATABASE_URL: str | None = None
 
