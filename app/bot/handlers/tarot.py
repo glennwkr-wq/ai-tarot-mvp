@@ -35,6 +35,11 @@ class YesNoStates(StatesGroup):
     waiting_for_question = State()
 
 
+# 👇 ДОБАВЛЕНО: FSM FOLLOWUP
+class FollowupStates(StatesGroup):
+    waiting_for_input = State()
+
+
 # ===================== MODERATION =====================
 
 def is_question_allowed(text: str) -> bool:
@@ -77,6 +82,18 @@ def get_after_reading_keyboard():
     return types.ReplyKeyboardMarkup(
         keyboard=[
             [types.KeyboardButton(text="🔮 Новый расклад")],
+            [types.KeyboardButton(text="🔙 Меню")],
+        ],
+        resize_keyboard=True
+    )
+
+
+# 👇 ДОБАВЛЕНО: FOLLOWUP KEYBOARD
+def get_followup_keyboard():
+    return types.ReplyKeyboardMarkup(
+        keyboard=[
+            [types.KeyboardButton(text="➕ Доп карта")],
+            [types.KeyboardButton(text="✍️ Уточнить")],
             [types.KeyboardButton(text="🔙 Меню")],
         ],
         resize_keyboard=True
@@ -180,7 +197,7 @@ async def support_send(message: types.Message, state: FSMContext):
     )
 
 
-# 👇 ДОБАВЛЕНО: ответ админа через reply
+# 👇 ответ админа
 @router.message(F.reply_to_message)
 async def admin_reply(message: types.Message):
     if message.from_user.id not in settings.admin_ids:
@@ -227,7 +244,7 @@ async def start_spread(message: types.Message, state: FSMContext):
 @router.message(F.text == "⏭ Пропустить")
 async def skip_question(message: types.Message, state: FSMContext):
     await state.clear()
-    await process_reading(message, "Общий расклад", mode="general")
+    await process_reading(message, state, "Общий расклад", mode="general")
 
 
 # ===================== 💬 ВОПРОС =====================
@@ -246,21 +263,110 @@ async def handle_question(message: types.Message, state: FSMContext):
         )
         return
 
-    await process_reading(message, message.text, mode="general")
+    await process_reading(message, state, message.text, mode="general")
 
 
 # ===================== ❤️ ОТНОШЕНИЯ =====================
 
 @router.message(F.text == "❤️ На отношения")
-async def love_reading(message: types.Message):
-    await process_reading(message, "Расклад на отношения", mode="love")
+async def love_reading(message: types.Message, state: FSMContext):
+    await process_reading(message, state, "Расклад на отношения", mode="love")
 
 
 # ===================== 💼 КАРЬЕРА =====================
 
 @router.message(F.text == "💼 На карьеру")
-async def career_reading(message: types.Message):
-    await process_reading(message, "Расклад на карьеру", mode="career")
+async def career_reading(message: types.Message, state: FSMContext):
+    await process_reading(message, state, "Расклад на карьеру", mode="career")
+
+
+# ===================== ➕ ДОП КАРТА =====================
+
+@router.message(F.text == "➕ Доп карта")
+async def extra_card(message: types.Message, state: FSMContext):
+    data = await state.get_data()
+    if not data:
+        return
+
+    user_id = message.from_user.id
+
+    balance = await get_balance(user_id)
+    if balance < 10:
+        await message.answer("❌ Недостаточно кредитов.")
+        return
+
+    await message.answer("🔮 Тяну дополнительную карту...")
+
+    card = draw_cards(1)[0]
+
+    await message.answer_photo(
+        photo=card["image_id"],
+        caption=f"🃏 <b>{card['name']}</b>",
+        parse_mode="HTML"
+    )
+
+    new_cards = data["cards"] + [card]
+
+    reading = await generate_tarot_answer(
+        data["question"],
+        new_cards,
+        mode="followup"
+    )
+
+    await change_balance(user_id, -10)
+
+    await state.update_data(cards=new_cards, last_answer=reading)
+
+    await message.answer(reading, reply_markup=get_followup_keyboard())
+
+
+# ===================== ✍️ УТОЧНЕНИЕ =====================
+
+@router.message(F.text == "✍️ Уточнить")
+async def уточнение_start(message: types.Message, state: FSMContext):
+    await state.set_state(FollowupStates.waiting_for_input)
+
+    await message.answer(
+        "Напишите, что хотите уточнить:",
+        reply_markup=types.ReplyKeyboardMarkup(
+            keyboard=[[types.KeyboardButton(text="🔙 Меню")]],
+            resize_keyboard=True
+        )
+    )
+
+
+@router.message(FollowupStates.waiting_for_input, F.text & ~F.text.in_(["🔙 Меню"]))
+async def уточнение_process(message: types.Message, state: FSMContext):
+    data = await state.get_data()
+
+    user_id = message.from_user.id
+
+    balance = await get_balance(user_id)
+    if balance < 10:
+        await message.answer("❌ Недостаточно кредитов.")
+        return
+
+    await message.answer("🔮 Уточняю расклад...")
+
+    new_question = data["question"] + "\nУточнение: " + message.text
+
+    reading = await generate_tarot_answer(
+        new_question,
+        data["cards"],
+        mode="followup"
+    )
+
+    await change_balance(user_id, -10)
+
+    await state.clear()
+    await state.update_data(
+        question=new_question,
+        cards=data["cards"],
+        mode=data["mode"],
+        last_answer=reading
+    )
+
+    await message.answer(reading, reply_markup=get_followup_keyboard())
 
 
 # ===================== 🃏 КАРТА ДНЯ =====================
@@ -364,7 +470,7 @@ async def back_to_menu(message: types.Message, state: FSMContext):
 
 # ===================== 🧠 ОБЩАЯ ЛОГИКА =====================
 
-async def process_reading(message: types.Message, question: str, mode: str = "general"):
+async def process_reading(message: types.Message, state: FSMContext, question: str, mode: str = "general"):
     user_id = message.from_user.id
 
     balance = await get_balance(user_id)
@@ -403,4 +509,11 @@ async def process_reading(message: types.Message, question: str, mode: str = "ge
 
     await save_reading(user_id, question, cards, reading)
 
-    await message.answer(reading, reply_markup=get_after_reading_keyboard())
+    await state.update_data(
+        question=question,
+        cards=cards,
+        mode=mode,
+        last_answer=reading
+    )
+
+    await message.answer(reading, reply_markup=get_followup_keyboard())
