@@ -30,6 +30,11 @@ class SupportStates(StatesGroup):
     waiting_for_message = State()
 
 
+# 👇 ДОБАВЛЕНО: FSM ДА/НЕТ
+class YesNoStates(StatesGroup):
+    waiting_for_question = State()
+
+
 # ===================== MODERATION =====================
 
 def is_question_allowed(text: str) -> bool:
@@ -78,6 +83,65 @@ def get_after_reading_keyboard():
     )
 
 
+# ===================== ❓ ДА / НЕТ =====================
+
+@router.message(F.text == "❓ Да / Нет")
+async def yesno_start(message: types.Message, state: FSMContext):
+    await state.set_state(YesNoStates.waiting_for_question)
+
+    await message.answer(
+        "Задайте вопрос, на который можно ответить «да» или «нет».",
+        reply_markup=types.ReplyKeyboardMarkup(
+            keyboard=[[types.KeyboardButton(text="🔙 Меню")]],
+            resize_keyboard=True
+        )
+    )
+
+
+@router.message(YesNoStates.waiting_for_question, F.text & ~F.text.in_(["🔙 Меню"]))
+async def yesno_process(message: types.Message, state: FSMContext):
+    await state.clear()
+
+    if not is_question_allowed(message.text):
+        await message.answer(
+            get_refusal_message(),
+            reply_markup=get_main_keyboard()
+        )
+        return
+
+    user_id = message.from_user.id
+
+    balance = await get_balance(user_id)
+    if balance < 10:
+        await message.answer("❌ Недостаточно кредитов.")
+        return
+
+    await message.answer("🔮 Смотрю карты...")
+
+    try:
+        cards = draw_cards(1)
+        card = cards[0]
+
+        await message.answer_photo(
+            photo=card["image_id"],
+            caption=f"🃏 <b>{card['name']}</b>",
+            parse_mode="HTML"
+        )
+
+        reading = await generate_tarot_answer(message.text, cards, mode="yesno")
+
+        await change_balance(user_id, -10)
+
+    except Exception as e:
+        print(f"Yes/No error: {e}")
+        await message.answer("⚠️ Произошла ошибка. Попробуйте позже.")
+        return
+
+    await save_reading(user_id, message.text, cards, reading)
+
+    await message.answer(reading, reply_markup=get_main_keyboard())
+
+
 # ===================== 🛟 ПОДДЕРЖКА =====================
 
 @router.message(F.text == "🛟 Поддержка")
@@ -85,8 +149,8 @@ async def support_start(message: types.Message, state: FSMContext):
     await state.set_state(SupportStates.waiting_for_message)
 
     await message.answer(
-        "📩 Напишите ваш вопрос — я передам его в поддержку.\n\n"
-        "Мы ответим вам здесь.",
+        "📩 Напишите Ваш вопрос — я передам его в поддержку.\n\n"
+        "Мы ответим Вам здесь.",
         reply_markup=types.ReplyKeyboardMarkup(
             keyboard=[[types.KeyboardButton(text="🔙 Меню")]],
             resize_keyboard=True
@@ -111,7 +175,7 @@ async def support_send(message: types.Message, state: FSMContext):
 
     await message.answer(
         "✨ Ваше сообщение отправлено.\n"
-        "Мы скоро ответим вам.",
+        "Мы скоро ответим Вам.",
         reply_markup=get_main_keyboard()
     )
 
@@ -152,7 +216,7 @@ async def start_spread(message: types.Message, state: FSMContext):
     await state.set_state(TarotStates.waiting_for_question)
 
     await message.answer(
-        "✨ Если у вас есть вопрос — напишите его.\n\n"
+        "✨ Если у Вас есть вопрос — напишите его.\n\n"
         "Или нажмите «Пропустить», чтобы сделать общий расклад.",
         reply_markup=get_skip_keyboard()
     )

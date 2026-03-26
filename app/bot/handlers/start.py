@@ -35,6 +35,9 @@ def get_main_keyboard():
                 types.KeyboardButton(text="💼 На карьеру"),
             ],
             [
+                types.KeyboardButton(text="❓ Да / Нет"),
+            ],
+            [
                 types.KeyboardButton(text="👤 Профиль"),
                 types.KeyboardButton(text="💰 Баланс"),
             ],
@@ -97,7 +100,7 @@ async def get_name(message: types.Message, state: FSMContext):
     await state.update_data(name=message.text.strip())
 
     await message.answer(
-        "Введите вашу дату рождения в формате ДД.ММ.ГГГГ\n\n"
+        "Введите Вашу дату рождения в формате ДД.ММ.ГГГГ\n\n"
         "Например: 12.05.1995"
     )
 
