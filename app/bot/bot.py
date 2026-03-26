@@ -3,6 +3,7 @@ import asyncio
 from aiogram import Bot, Dispatcher
 from aiogram.client.session.aiohttp import AiohttpSession
 from aiogram.fsm.storage.memory import MemoryStorage
+from aiogram.types import BotCommand
 
 from app.core.config import settings
 from app.bot.handlers import start, tarot
@@ -27,6 +28,16 @@ dp.include_router(start.router)
 dp.include_router(tarot.router)
 
 
+async def set_commands():
+    commands = [
+        BotCommand(
+            command="start",
+            description="Нажми, если я перестала отвечать",
+        ),
+    ]
+    await bot.set_my_commands(commands)
+
+
 # 👇 ФОНОВАЯ ЗАДАЧА
 async def notification_loop():
     while True:
@@ -44,6 +55,8 @@ async def main():
 
     me = await bot.get_me()
     print(f"✅ Бот авторизован как @{me.username}")
+
+    await set_commands()
 
     # 👇 запускаем фоновую задачу
     asyncio.create_task(notification_loop())

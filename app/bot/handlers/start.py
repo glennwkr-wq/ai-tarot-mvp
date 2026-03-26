@@ -40,6 +40,7 @@ def get_main_keyboard():
             ],
             [
                 types.KeyboardButton(text="⚙️ Настройки"),
+                types.KeyboardButton(text="🛟 Поддержка"),
             ],
         ],
         resize_keyboard=True

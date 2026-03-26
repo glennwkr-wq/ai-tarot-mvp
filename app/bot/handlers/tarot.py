@@ -14,6 +14,7 @@ from app.services.user_service import (
     mark_card_of_day_used,
 )
 from app.services.reading_service import save_reading
+from app.core.config import settings
 
 router = Router()
 
@@ -22,6 +23,11 @@ router = Router()
 
 class TarotStates(StatesGroup):
     waiting_for_question = State()
+
+
+# 👇 ДОБАВЛЕНО: FSM ПОДДЕРЖКИ
+class SupportStates(StatesGroup):
+    waiting_for_message = State()
 
 
 # ===================== MODERATION =====================
@@ -69,6 +75,74 @@ def get_after_reading_keyboard():
             [types.KeyboardButton(text="🔙 Меню")],
         ],
         resize_keyboard=True
+    )
+
+
+# ===================== 🛟 ПОДДЕРЖКА =====================
+
+@router.message(F.text == "🛟 Поддержка")
+async def support_start(message: types.Message, state: FSMContext):
+    await state.set_state(SupportStates.waiting_for_message)
+
+    await message.answer(
+        "📩 Напишите ваш вопрос — я передам его в поддержку.\n\n"
+        "Мы ответим вам здесь.",
+        reply_markup=types.ReplyKeyboardMarkup(
+            keyboard=[[types.KeyboardButton(text="🔙 Меню")]],
+            resize_keyboard=True
+        )
+    )
+
+
+@router.message(SupportStates.waiting_for_message, F.text & ~F.text.in_(["🔙 Меню"]))
+async def support_send(message: types.Message, state: FSMContext):
+    user = await get_user(message.from_user.id)
+
+    text = (
+        f"📩 Сообщение в поддержку\n\n"
+        f"👤 {user.name}\n"
+        f"ID: {message.from_user.id}\n\n"
+        f"{message.text}"
+    )
+
+    for admin_id in settings.admin_ids:
+        await message.bot.send_message(admin_id, text)
+
+    await state.clear()
+
+    await message.answer(
+        "✨ Ваше сообщение отправлено.\n"
+        "Мы скоро ответим вам.",
+        reply_markup=get_main_keyboard()
+    )
+
+
+# 👇 ДОБАВЛЕНО: ответ админа через reply
+@router.message(F.reply_to_message)
+async def admin_reply(message: types.Message):
+    if message.from_user.id not in settings.admin_ids:
+        return
+
+    original_text = message.reply_to_message.text
+
+    if not original_text or "ID:" not in original_text:
+        return
+
+    try:
+        user_id = int(original_text.split("ID:")[1].split("\n")[0].strip())
+    except:
+        return
+
+    await message.bot.send_message(
+        user_id,
+        f"💬 Ответ поддержки:\n\n{message.text}",
+        reply_markup=types.ReplyKeyboardMarkup(
+            keyboard=[
+                [types.KeyboardButton(text="🛟 Поддержка")],
+                [types.KeyboardButton(text="🔙 Меню")]
+            ],
+            resize_keyboard=True
+        )
     )
 
 
