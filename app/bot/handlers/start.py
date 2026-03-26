@@ -32,6 +32,7 @@ def get_main_keyboard():
             ],
             [
                 types.KeyboardButton(text="❤️ На отношения"),
+                types.KeyboardButton(text="💼 На карьеру"),
             ],
             [
                 types.KeyboardButton(text="👤 Профиль"),

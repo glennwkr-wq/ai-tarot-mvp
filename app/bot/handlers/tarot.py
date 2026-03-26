@@ -119,6 +119,13 @@ async def love_reading(message: types.Message):
     await process_reading(message, "Расклад на отношения", mode="love")
 
 
+# ===================== 💼 КАРЬЕРА =====================
+
+@router.message(F.text == "💼 На карьеру")
+async def career_reading(message: types.Message):
+    await process_reading(message, "Расклад на карьеру", mode="career")
+
+
 # ===================== 🃏 КАРТА ДНЯ =====================
 
 @router.message(F.text == "🃏 Карта дня")

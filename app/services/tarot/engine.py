@@ -9,6 +9,8 @@ def draw_cards(n: int = 3) -> list[dict]:
 def build_interpretation_context(cards: list[dict], question: str, mode: str = "general") -> str:
     if mode == "love":
         positions = ["Вы", "Партнер", "Динамика между вами"]
+    elif mode == "career":
+        positions = ["Текущая ситуация", "Возможности", "Куда двигаться"]
     elif mode == "daily":
         positions = ["Карта дня"]
     else:
