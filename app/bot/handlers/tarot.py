@@ -310,7 +310,9 @@ async def extra_card(message: types.Message, state: FSMContext):
     reading = await generate_tarot_answer(
         data["question"],
         new_cards,
-        mode="followup"
+        mode="followup",
+        previous_answer=data.get("last_answer"),
+        followup_type="extra_card"
     )
 
     await change_balance(user_id, -10)
@@ -348,19 +350,24 @@ async def уточнение_process(message: types.Message, state: FSMContext):
 
     await message.answer("🔮 Уточняю расклад...")
 
-    new_question = data["question"] + "\nУточнение: " + message.text
+    clarification_question = (
+        f"Исходный вопрос: {data['question']}\n"
+        f"Уточнение пользователя: {message.text}"
+    )
 
     reading = await generate_tarot_answer(
-        new_question,
+        clarification_question,
         data["cards"],
-        mode="followup"
+        mode="followup",
+        previous_answer=data.get("last_answer"),
+        followup_type="clarification"
     )
 
     await change_balance(user_id, -10)
 
     await state.clear()
     await state.update_data(
-        question=new_question,
+        question=data["question"],
         cards=data["cards"],
         mode=data["mode"],
         last_answer=reading
