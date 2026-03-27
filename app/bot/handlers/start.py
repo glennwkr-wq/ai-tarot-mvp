@@ -36,6 +36,7 @@ def get_main_keyboard(user_id: int | None = None):
         ],
         [
             types.KeyboardButton(text="❓ Да / Нет"),
+            types.KeyboardButton(text="🗓 Расклад на год"),
         ],
         [
             types.KeyboardButton(text="👤 Профиль"),

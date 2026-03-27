@@ -546,6 +546,17 @@ async def love_reading(message: types.Message, state: FSMContext):
 async def career_reading(message: types.Message, state: FSMContext):
     await process_reading(message, state, "Расклад на карьеру", mode="career")
 
+@router.message(F.text == "🗓 Расклад на год")
+async def year_reading(message: types.Message, state: FSMContext):
+    await process_reading(
+        message,
+        state,
+        "Расклад на год",
+        mode="year",
+        card_count=12,
+        price=50,
+        enable_followup=False
+    )
 
 # ===================== ➕ ДОП КАРТА =====================
 
@@ -744,19 +755,30 @@ async def back_to_menu(message: types.Message, state: FSMContext):
 
 # ===================== 🧠 ОБЩАЯ ЛОГИКА =====================
 
-async def process_reading(message: types.Message, state: FSMContext, question: str, mode: str = "general"):
+async def process_reading(
+    message: types.Message,
+    state: FSMContext,
+    question: str,
+    mode: str = "general",
+    card_count: int = 3,
+    price: int = 10,
+    enable_followup: bool = True
+):
     user_id = message.from_user.id
 
     balance = await get_balance(user_id)
 
-    if balance < 10:
+    if balance < price:
         await message.answer("❌ Недостаточно кредитов.")
         return
 
-    await message.answer("🔮 Смотрю карты...")
+    if mode == "year":
+        await message.answer("🔮 Смотрю расклад на год...\n⏳ Это займёт чуть больше времени, чем обычно.")
+    else:
+        await message.answer("🔮 Смотрю карты...")
 
     try:
-        cards = draw_cards(3)
+        cards = draw_cards(card_count)
 
         cards_text = "\n".join([f"• {c['name']}" for c in cards])
         await message.answer(f"🃏 Выпали карты:\n{cards_text}")
@@ -770,11 +792,15 @@ async def process_reading(message: types.Message, state: FSMContext, question: s
                 )
             )
 
-        await message.answer_media_group(media)
+        if len(media) <= 6:
+            await message.answer_media_group(media)
+        else:
+            await message.answer_media_group(media[:6])
+            await message.answer_media_group(media[6:])
 
         reading = await generate_tarot_answer(question, cards, mode=mode)
 
-        await change_balance(user_id, -10)
+        await change_balance(user_id, -price)
 
     except Exception as e:
         print(f"Tarot error: {e}")
@@ -783,11 +809,18 @@ async def process_reading(message: types.Message, state: FSMContext, question: s
 
     await save_reading(user_id, question, cards, reading)
 
-    await state.update_data(
-        question=question,
-        cards=cards,
-        mode=mode,
-        last_answer=reading
-    )
+    if enable_followup:
+        await state.update_data(
+            question=question,
+            cards=cards,
+            mode=mode,
+            last_answer=reading
+        )
 
-    await message.answer(reading, reply_markup=get_followup_keyboard())
+        await message.answer(reading, reply_markup=get_followup_keyboard())
+    else:
+        await state.clear()
+        await message.answer(
+            reading,
+            reply_markup=get_main_keyboard(message.from_user.id)
+        )

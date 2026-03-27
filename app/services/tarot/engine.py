@@ -1,6 +1,6 @@
 import random
 from app.knowledge_base.cards import CARDS
-
+from datetime import datetime
 
 def draw_cards(n: int = 3) -> list[dict]:
     return random.sample(CARDS, n)
@@ -13,6 +13,18 @@ def build_interpretation_context(cards: list[dict], question: str, mode: str = "
         positions = ["Текущая ситуация", "Возможности", "Куда двигаться"]
     elif mode == "daily":
         positions = ["Карта дня"]
+    elif mode == "year":
+        months = [
+            "Январь", "Февраль", "Март", "Апрель",
+            "Май", "Июнь", "Июль", "Август",
+            "Сентябрь", "Октябрь", "Ноябрь", "Декабрь"
+        ]
+
+        current_month = datetime.now().month - 1
+
+        positions = [
+            months[(current_month + i) % 12] for i in range(12)
+        ]
     else:
         positions = ["Прошлое", "Настоящее", "Будущее"]
 
