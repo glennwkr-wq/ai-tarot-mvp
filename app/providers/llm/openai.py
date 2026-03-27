@@ -323,15 +323,15 @@ async def generate_tarot_answer(
 """
         max_tokens = 450
 
-async with semaphore:
-    await wait_for_slot()
+    async with semaphore:
+        await wait_for_slot()
 
-    response = await asyncio.to_thread(
-        client.chat.completions.create,
-        model="gpt-4o-mini",
-        messages=[{"role": "user", "content": prompt}],
-        max_tokens=max_tokens,
-        temperature=0.75,
-    )
+        response = await asyncio.to_thread(
+            client.chat.completions.create,
+            model="gpt-4o-mini",
+            messages=[{"role": "user", "content": prompt}],
+            max_tokens=max_tokens,
+            temperature=0.75,
+        )
 
     return response.choices[0].message.content
