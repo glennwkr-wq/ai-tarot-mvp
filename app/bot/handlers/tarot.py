@@ -2,6 +2,10 @@ from aiogram import Router, types, F
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import StatesGroup, State
 
+from sqlalchemy import select
+from app.db.session import SessionLocal
+from app.models.user import User
+
 from app.services.tarot.engine import draw_cards
 from app.providers.llm.openai import generate_tarot_answer
 from app.bot.handlers.start import get_main_keyboard
@@ -42,6 +46,11 @@ class FollowupStates(StatesGroup):
 class AdminCreditStates(StatesGroup):
     waiting_for_user_id = State()
     waiting_for_amount = State()
+
+class AdminBroadcastStates(StatesGroup):
+    waiting_for_target = State()
+    waiting_for_text = State()
+    waiting_for_confirm = State()
 
 # ===================== MODERATION =====================
 
@@ -190,6 +199,153 @@ async def admin_give_credits_start(message: types.Message, state: FSMContext):
             keyboard=[[types.KeyboardButton(text="🔙 Меню")]],
             resize_keyboard=True
         )
+    )
+
+@router.message(F.text == "📢 Сообщение пользователям")
+async def admin_broadcast_start(message: types.Message, state: FSMContext):
+    if message.from_user.id != settings.SUPPORT_ADMIN_ID:
+        return
+
+    await state.set_state(AdminBroadcastStates.waiting_for_target)
+
+    await message.answer(
+        "Введите Telegram ID пользователя\nили нажмите кнопку «Отправить всем»:",
+        reply_markup=types.ReplyKeyboardMarkup(
+            keyboard=[
+                [types.KeyboardButton(text="📨 Отправить всем")],
+                [types.KeyboardButton(text="🔙 Меню")]
+            ],
+            resize_keyboard=True
+        )
+    )
+
+@router.message(AdminBroadcastStates.waiting_for_target, F.text & ~F.text.in_(["🔙 Меню"]))
+async def admin_broadcast_choose_target(message: types.Message, state: FSMContext):
+    if message.from_user.id != settings.SUPPORT_ADMIN_ID:
+        await state.clear()
+        return
+
+    text = message.text.strip()
+
+    if text == "📨 Отправить всем":
+        await state.update_data(target="all")
+
+    elif text.isdigit():
+        target_id = int(text)
+        user = await get_user(target_id)
+
+        if not user:
+            await state.clear()
+            await message.answer(
+                "❌ Пользователь не найден.",
+                reply_markup=get_main_keyboard(message.from_user.id)
+            )
+            return
+
+        await state.update_data(target=target_id)
+
+    else:
+        await message.answer("⚠️ Введите корректный ID или выберите кнопку.")
+        return
+
+    await state.set_state(AdminBroadcastStates.waiting_for_text)
+
+    await message.answer(
+        "Введите текст сообщения:",
+        reply_markup=types.ReplyKeyboardMarkup(
+            keyboard=[[types.KeyboardButton(text="🔙 Меню")]],
+            resize_keyboard=True
+        )
+    )
+
+@router.message(AdminBroadcastStates.waiting_for_text, F.text & ~F.text.in_(["🔙 Меню"]))
+async def admin_broadcast_text(message: types.Message, state: FSMContext):
+    if message.from_user.id != settings.SUPPORT_ADMIN_ID:
+        await state.clear()
+        return
+
+    await state.update_data(text=message.text)
+
+    data = await state.get_data()
+
+    target = data["target"]
+
+    target_text = "ВСЕМ пользователям" if target == "all" else f"пользователю {target}"
+
+    await state.set_state(AdminBroadcastStates.waiting_for_confirm)
+
+    await message.answer(
+        f"Вы собираетесь отправить сообщение:\n\n"
+        f"{message.text}\n\n"
+        f"Получатель: {target_text}\n\n"
+        f"Подтвердить отправку?",
+        reply_markup=types.ReplyKeyboardMarkup(
+            keyboard=[
+                [types.KeyboardButton(text="✅ Отправить")],
+                [types.KeyboardButton(text="🔙 Меню")]
+            ],
+            resize_keyboard=True
+        )
+    )
+
+@router.message(AdminBroadcastStates.waiting_for_confirm, F.text == "✅ Отправить")
+async def admin_broadcast_send(message: types.Message, state: FSMContext):
+    if message.from_user.id != settings.SUPPORT_ADMIN_ID:
+        await state.clear()
+        return
+
+    data = await state.get_data()
+    target = data["target"]
+    text = data["text"]
+
+    success = 0
+    failed = 0
+
+    if target == "all":
+        async with SessionLocal() as session:
+            result = await session.execute(select(User))
+            users = result.scalars().all()
+
+        for user in users:
+            try:
+                await message.bot.send_message(user.telegram_id, text)
+                success += 1
+            except Exception:
+                failed += 1
+
+    else:
+        try:
+            await message.bot.send_message(target, text)
+            success += 1
+        except Exception:
+            failed += 1
+
+    await state.clear()
+
+    await message.answer(
+        f"✅ Рассылка завершена\n\n"
+        f"Успешно: {success}\n"
+        f"Ошибки: {failed}",
+        reply_markup=get_main_keyboard(message.from_user.id)
+    )
+
+@router.message(
+    AdminBroadcastStates.waiting_for_target,
+    F.text == "🔙 Меню"
+)
+@router.message(
+    AdminBroadcastStates.waiting_for_text,
+    F.text == "🔙 Меню"
+)
+@router.message(
+    AdminBroadcastStates.waiting_for_confirm,
+    F.text == "🔙 Меню"
+)
+async def admin_broadcast_cancel(message: types.Message, state: FSMContext):
+    await state.clear()
+    await message.answer(
+        "Главное меню:",
+        reply_markup=get_main_keyboard(message.from_user.id)
     )
 
 @router.message(AdminCreditStates.waiting_for_user_id, F.text & ~F.text.in_(["🔙 Меню"]))

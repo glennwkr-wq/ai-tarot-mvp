@@ -51,6 +51,9 @@ def get_main_keyboard(user_id: int | None = None):
         keyboard.append(
             [types.KeyboardButton(text="➕ Начислить кредиты")]
         )
+        keyboard.append(
+            [types.KeyboardButton(text="📢 Сообщение пользователям")]
+        )
 
     return types.ReplyKeyboardMarkup(
         keyboard=keyboard,
