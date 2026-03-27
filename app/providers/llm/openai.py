@@ -1,9 +1,37 @@
 from app.services.tarot.engine import build_interpretation_context
 from app.core.config import settings
 from openai import OpenAI
+import asyncio
+import time
 
 client = OpenAI(api_key=settings.OPENAI_API_KEY)
 
+# ===== RATE LIMITER =====
+
+# Максимум запросов в минуту (чуть ниже лимита OpenAI для безопасности)
+MAX_REQUESTS_PER_MINUTE = 120
+
+# Максимум одновременных запросов (под CPU + сеть)
+MAX_CONCURRENT_REQUESTS = 7
+
+request_times = []
+semaphore = asyncio.Semaphore(MAX_CONCURRENT_REQUESTS)
+lock = asyncio.Lock()
+
+
+async def wait_for_slot():
+    async with lock:
+        now = time.time()
+
+        # очищаем старые запросы (старше 60 сек)
+        while request_times and now - request_times[0] > 60:
+            request_times.pop(0)
+
+        if len(request_times) >= MAX_REQUESTS_PER_MINUTE:
+            sleep_time = 60 - (now - request_times[0])
+            await asyncio.sleep(sleep_time)
+
+        request_times.append(time.time())
 
 async def generate_tarot_answer(
     question: str,
@@ -295,7 +323,11 @@ async def generate_tarot_answer(
 """
         max_tokens = 450
 
-    response = client.chat.completions.create(
+async with semaphore:
+    await wait_for_slot()
+
+    response = await asyncio.to_thread(
+        client.chat.completions.create,
         model="gpt-4o-mini",
         messages=[{"role": "user", "content": prompt}],
         max_tokens=max_tokens,
