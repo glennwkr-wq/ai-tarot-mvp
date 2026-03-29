@@ -1,4 +1,5 @@
 from aiogram import Router, types, F
+import asyncio
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import StatesGroup, State
 
@@ -677,7 +678,6 @@ async def card_of_day(message: types.Message):
     card = cards[0]
 
     await message.answer_photo(
-        import asyncio
         await asyncio.sleep(1)
         await message.answer("🔮 Читаю карту дня...")
         photo=card["image_id"],
@@ -781,8 +781,6 @@ async def process_reading(
 
         cards_text = "\n".join([f"• {c['name']}" for c in cards])
         await message.answer(f"🃏 Выпали карты:\n{cards_text}")
-
-        import asyncio
 
         await asyncio.sleep(1)
 
