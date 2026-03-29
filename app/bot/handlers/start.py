@@ -27,16 +27,16 @@ class SettingsStates(StatesGroup):
 def get_main_keyboard(user_id: int | None = None):
     keyboard = [
         [
-            types.KeyboardButton(text="🔮 Расклад"),
-            types.KeyboardButton(text="🃏 Карта дня"),
+            types.KeyboardButton(text="🔮 Расклад (10💰)"),
+            types.KeyboardButton(text="🃏 Карта дня (10💰)"),
         ],
         [
-            types.KeyboardButton(text="❤️ На отношения"),
-            types.KeyboardButton(text="💼 На карьеру"),
+            types.KeyboardButton(text="❤️ На отношения (10💰)"),
+            types.KeyboardButton(text="💼 На карьеру (10💰)"),
         ],
         [
-            types.KeyboardButton(text="❓ Да / Нет"),
-            types.KeyboardButton(text="🗓 Расклад на год"),
+            types.KeyboardButton(text="❓ Да / Нет (10💰)"),
+            types.KeyboardButton(text="🗓 Расклад на год (50💰)"),
         ],
         [
             types.KeyboardButton(text="👤 Профиль"),
@@ -72,6 +72,22 @@ def get_settings_keyboard():
         resize_keyboard=True
     )
 
+def zodiac_with_emoji(zodiac: str) -> str:
+    mapping = {
+        "Овен": "♈",
+        "Телец": "♉",
+        "Близнецы": "♊",
+        "Рак": "♋",
+        "Лев": "♌",
+        "Дева": "♍",
+        "Весы": "♎",
+        "Скорпион": "♏",
+        "Стрелец": "♐",
+        "Козерог": "♑",
+        "Водолей": "♒",
+        "Рыбы": "♓",
+    }
+    return f"{mapping.get(zodiac, '')} {zodiac}"
 
 @router.message(CommandStart())
 async def start_handler(message: types.Message, state: FSMContext):
@@ -138,7 +154,7 @@ async def get_birthdate(message: types.Message, state: FSMContext):
 
     await message.answer(
         f"✨ Приятно познакомиться, {name}\n\n"
-        f"Ваш знак: {zodiac}\n"
+        f"Ваш знак: {zodiac_with_emoji(zodiac)}\n"
         f"🎁 Вам начислено 30 кредитов\n\n"
         "🔮 Можем начать работу с картами",
         reply_markup=get_main_keyboard(message.from_user.id)

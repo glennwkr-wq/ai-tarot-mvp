@@ -93,7 +93,7 @@ def get_skip_keyboard():
 def get_after_reading_keyboard():
     return types.ReplyKeyboardMarkup(
         keyboard=[
-            [types.KeyboardButton(text="🔮 Новый расклад")],
+            [types.KeyboardButton(text="🔮 Новый расклад (10💰)")],
             [types.KeyboardButton(text="🔙 Меню")],
         ],
         resize_keyboard=True
@@ -104,8 +104,8 @@ def get_after_reading_keyboard():
 def get_followup_keyboard():
     return types.ReplyKeyboardMarkup(
         keyboard=[
-            [types.KeyboardButton(text="➕ Доп карта")],
-            [types.KeyboardButton(text="✍️ Уточнить")],
+            [types.KeyboardButton(text="➕ Доп карта (10💰)")],
+            [types.KeyboardButton(text="✍️ Уточнить (10💰)")],
             [types.KeyboardButton(text="🔙 Меню")],
         ],
         resize_keyboard=True
@@ -114,7 +114,7 @@ def get_followup_keyboard():
 
 # ===================== ❓ ДА / НЕТ =====================
 
-@router.message(F.text == "❓ Да / Нет")
+@router.message(F.text == "❓ Да / Нет (10💰)")
 async def yesno_start(message: types.Message, state: FSMContext):
     await state.set_state(YesNoStates.waiting_for_question)
 
@@ -495,7 +495,7 @@ async def admin_reply(message: types.Message):
 
 # ===================== 🔮 СТАРТ РАСКЛАДА =====================
 
-@router.message(F.text.in_(["🔮 Расклад", "🔮 Новый расклад"]))
+@router.message(F.text.in_(["🔮 Расклад (10💰)", "🔮 Новый расклад (10💰)"]))
 async def start_spread(message: types.Message, state: FSMContext):
     await state.set_state(TarotStates.waiting_for_question)
 
@@ -535,18 +535,18 @@ async def handle_question(message: types.Message, state: FSMContext):
 
 # ===================== ❤️ ОТНОШЕНИЯ =====================
 
-@router.message(F.text == "❤️ На отношения")
+@router.message(F.text == "❤️ На отношения (10💰)")
 async def love_reading(message: types.Message, state: FSMContext):
     await process_reading(message, state, "Расклад на отношения", mode="love")
 
 
 # ===================== 💼 КАРЬЕРА =====================
 
-@router.message(F.text == "💼 На карьеру")
+@router.message(F.text == "💼 На карьеру (10💰)")
 async def career_reading(message: types.Message, state: FSMContext):
     await process_reading(message, state, "Расклад на карьеру", mode="career")
 
-@router.message(F.text == "🗓 Расклад на год")
+@router.message(F.text == "🗓 Расклад на год (50💰)")
 async def year_reading(message: types.Message, state: FSMContext):
     await process_reading(
         message,
@@ -560,7 +560,7 @@ async def year_reading(message: types.Message, state: FSMContext):
 
 # ===================== ➕ ДОП КАРТА =====================
 
-@router.message(F.text == "➕ Доп карта")
+@router.message(F.text == "➕ Доп карта (10💰)")
 async def extra_card(message: types.Message, state: FSMContext):
     data = await state.get_data()
     if not data:
@@ -602,7 +602,7 @@ async def extra_card(message: types.Message, state: FSMContext):
 
 # ===================== ✍️ УТОЧНЕНИЕ =====================
 
-@router.message(F.text == "✍️ Уточнить")
+@router.message(F.text == "✍️ Уточнить (10💰)")
 async def уточнение_start(message: types.Message, state: FSMContext):
     await state.set_state(FollowupStates.waiting_for_input)
 
@@ -656,7 +656,7 @@ async def уточнение_process(message: types.Message, state: FSMContext):
 
 # ===================== 🃏 КАРТА ДНЯ =====================
 
-@router.message(F.text == "🃏 Карта дня")
+@router.message(F.text == "🃏 Карта дня (10💰)")
 async def card_of_day(message: types.Message):
     user = await get_user(message.from_user.id)
 
@@ -677,6 +677,9 @@ async def card_of_day(message: types.Message):
     card = cards[0]
 
     await message.answer_photo(
+        import asyncio
+        await asyncio.sleep(1)
+        await message.answer("🔮 Читаю карту дня...")
         photo=card["image_id"],
         caption=f"🃏 <b>{card['name']}</b>",
         parse_mode="HTML"
@@ -724,7 +727,8 @@ async def profile_handler(message: types.Message):
         f"👤 Профиль\n\n"
         f"Имя: {user.name}\n"
         f"Дата рождения: {user.birthdate}\n"
-        f"Знак: {user.zodiac}\n"
+        from app.bot.handlers.start import zodiac_with_emoji
+        f"Знак: {zodiac_with_emoji(user.zodiac)}\n"
         f"Баланс: {balance}",
         reply_markup=get_main_keyboard(message.from_user.id)
     )
@@ -772,16 +776,15 @@ async def process_reading(
         await message.answer("❌ Недостаточно кредитов.")
         return
 
-    if mode == "year":
-        await message.answer("🔮 Смотрю расклад на год...\n⏳ Это займёт чуть больше времени, чем обычно.")
-    else:
-        await message.answer("🔮 Смотрю карты...")
-
     try:
         cards = draw_cards(card_count)
 
         cards_text = "\n".join([f"• {c['name']}" for c in cards])
         await message.answer(f"🃏 Выпали карты:\n{cards_text}")
+
+        import asyncio
+
+        await asyncio.sleep(1)
 
         media = []
 
@@ -797,6 +800,15 @@ async def process_reading(
         else:
             await message.answer_media_group(media[:6])
             await message.answer_media_group(media[6:])
+
+        await asyncio.sleep(1)
+
+        if mode == "year":
+            await message.answer("🔮 Читаю расклад на год...")
+        else:
+            await message.answer("🔮 Читаю карты...")        
+
+        await asyncio.sleep(1)
 
         reading = await generate_tarot_answer(question, cards, mode=mode)
 
