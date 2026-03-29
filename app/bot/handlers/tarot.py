@@ -3,6 +3,8 @@ import asyncio
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import StatesGroup, State
 
+from app.bot.handlers.start import zodiac_with_emoji
+
 from sqlalchemy import select
 from app.db.session import SessionLocal
 from app.models.user import User
@@ -678,12 +680,14 @@ async def card_of_day(message: types.Message):
     card = cards[0]
 
     await message.answer_photo(
-        await asyncio.sleep(1)
-        await message.answer("🔮 Читаю карту дня...")
         photo=card["image_id"],
         caption=f"🃏 <b>{card['name']}</b>",
         parse_mode="HTML"
     )
+
+    await asyncio.sleep(1)
+
+    await message.answer("🔮 Читаю карту дня...")
 
     try:
         reading = await generate_tarot_answer("Карта дня", cards, mode="daily")
@@ -727,7 +731,6 @@ async def profile_handler(message: types.Message):
         f"👤 Профиль\n\n"
         f"Имя: {user.name}\n"
         f"Дата рождения: {user.birthdate}\n"
-        from app.bot.handlers.start import zodiac_with_emoji
         f"Знак: {zodiac_with_emoji(user.zodiac)}\n"
         f"Баланс: {balance}",
         reply_markup=get_main_keyboard(message.from_user.id)
