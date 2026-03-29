@@ -185,7 +185,7 @@ async def generate_tarot_answer(
 КОНТЕКСТ:
 {context}
 """
-        max_tokens = 450
+        max_tokens = 500
 
     elif mode == "career":
         prompt = f"""
@@ -231,7 +231,7 @@ async def generate_tarot_answer(
 КОНТЕКСТ:
 {context}
 """
-        max_tokens = 450
+        max_tokens = 500
 
     elif mode == "year":
         prompt = f"""
@@ -264,10 +264,13 @@ async def generate_tarot_answer(
 
 🗓 Расклад на год
 
-Следуй порядку месяцев ИЗ КОНТЕКСТА (не фиксированный январь-декабрь).
+Следуй порядку месяцев ИЗ КОНТЕКСТА.
 
-Каждый месяц:
-— Название месяца и 2–3 предложения
+ВАЖНО:
+- используй названия месяцев СТРОГО как в контексте (включая эмодзи)
+- не изменяй их
+- не заменяй на обычные названия без эмодзи
+- название каждого месяца из контекста + 2-3 предложения к каждому месяцу.
 
 В конце:
 
@@ -376,7 +379,7 @@ async def generate_tarot_answer(
 КОНТЕКСТ:
 {context}
 """
-        max_tokens = 450
+        max_tokens = 500
 
     async with semaphore:
         await wait_for_slot()
