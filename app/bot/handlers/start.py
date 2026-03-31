@@ -40,6 +40,19 @@ def get_main_keyboard(user_id: int | None = None):
         ],
     ]
 
+    if user_id == settings.SUPPORT_ADMIN_ID:
+        keyboard.append(
+            [types.KeyboardButton(text="➕ Начислить кредиты")]
+        )
+        keyboard.append(
+            [types.KeyboardButton(text="📢 Сообщение пользователям")]
+        )
+
+    return types.ReplyKeyboardMarkup(
+        keyboard=keyboard,
+        resize_keyboard=True
+    )
+
 def get_spreads_keyboard():
     return types.ReplyKeyboardMarkup(
         keyboard=[
@@ -54,19 +67,6 @@ def get_spreads_keyboard():
             [types.KeyboardButton(text="🗓 На год 50💰")],
             [types.KeyboardButton(text="🔙 Меню")],
         ],
-        resize_keyboard=True
-    )
-
-    if user_id == settings.SUPPORT_ADMIN_ID:
-        keyboard.append(
-            [types.KeyboardButton(text="➕ Начислить кредиты")]
-        )
-        keyboard.append(
-            [types.KeyboardButton(text="📢 Сообщение пользователям")]
-        )
-
-    return types.ReplyKeyboardMarkup(
-        keyboard=keyboard,
         resize_keyboard=True
     )
 
