@@ -107,7 +107,7 @@ def get_skip_keyboard():
 def get_after_reading_keyboard():
     return types.ReplyKeyboardMarkup(
         keyboard=[
-            [types.KeyboardButton(text="🔮 Новый расклад 10💰")],
+            [types.KeyboardButton(text="🔮 Новый расклад 10🪙")],
             [types.KeyboardButton(text="🔙 Меню")],
         ],
         resize_keyboard=True
@@ -118,8 +118,8 @@ def get_after_reading_keyboard():
 def get_followup_keyboard():
     return types.ReplyKeyboardMarkup(
         keyboard=[
-            [types.KeyboardButton(text="➕ Доп карта 10💰")],
-            [types.KeyboardButton(text="✍️ Уточнить 10💰")],
+            [types.KeyboardButton(text="➕ Доп карта 10🪙")],
+            [types.KeyboardButton(text="✍️ Уточнить 10🪙")],
             [types.KeyboardButton(text="🔙 Меню")],
         ],
         resize_keyboard=True
@@ -128,7 +128,7 @@ def get_followup_keyboard():
 
 # ===================== ❓ ДА / НЕТ =====================
 
-@router.message(F.text == "❓ Да / Нет 10💰")
+@router.message(F.text == "❓ Да / Нет 10🪙")
 async def yesno_start(message: types.Message, state: FSMContext):
 
     if await is_user_processing(state):
@@ -519,7 +519,7 @@ async def admin_reply(message: types.Message):
 
 # ===================== 🔮 СТАРТ РАСКЛАДА =====================
 
-@router.message(F.text.in_(["🔮 Расклад 10💰", "🔮 Новый расклад 10💰"]))
+@router.message(F.text.in_(["🔮 Расклад 10🪙", "🔮 Новый расклад 10🪙"]))
 async def start_spread(message: types.Message, state: FSMContext):
     
     if await is_user_processing(state):
@@ -573,7 +573,7 @@ async def handle_question(message: types.Message, state: FSMContext):
 
 # ===================== ❤️ ОТНОШЕНИЯ =====================
 
-@router.message(F.text == "❤️ На отношения 10💰")
+@router.message(F.text == "❤️ На партнера 10🪙")
 async def love_reading(message: types.Message, state: FSMContext):
     
     if await is_user_processing(state):
@@ -585,7 +585,7 @@ async def love_reading(message: types.Message, state: FSMContext):
 
 # ===================== 💼 КАРЬЕРА =====================
 
-@router.message(F.text == "💼 На карьеру 10💰")
+@router.message(F.text == "💼 На карьеру 10🪙")
 async def career_reading(message: types.Message, state: FSMContext):
     
     if await is_user_processing(state):
@@ -594,7 +594,7 @@ async def career_reading(message: types.Message, state: FSMContext):
 
     await process_reading(message, state, "Расклад на карьеру", mode="career")
 
-@router.message(F.text == "🗓 Расклад на год 50💰")
+@router.message(F.text == "🗓 На год 50🪙")
 async def year_reading(message: types.Message, state: FSMContext):
 
     if await is_user_processing(state):
@@ -613,7 +613,7 @@ async def year_reading(message: types.Message, state: FSMContext):
 
 # ===================== ➕ ДОП КАРТА =====================
 
-@router.message(F.text == "➕ Доп карта 10💰")
+@router.message(F.text == "➕ Доп карта 10🪙")
 async def extra_card(message: types.Message, state: FSMContext):
 
     if await is_user_processing(state):
@@ -664,7 +664,7 @@ async def extra_card(message: types.Message, state: FSMContext):
 
 # ===================== ✍️ УТОЧНЕНИЕ =====================
 
-@router.message(F.text == "✍️ Уточнить 10💰")
+@router.message(F.text == "✍️ Уточнить 10🪙")
 async def уточнение_start(message: types.Message, state: FSMContext):
 
     if await is_user_processing(state):
@@ -733,7 +733,7 @@ async def уточнение_process(message: types.Message, state: FSMContext):
 
 # ===================== 🃏 КАРТА ДНЯ =====================
 
-@router.message(F.text == "🃏 Карта дня 10💰")
+@router.message(F.text == "🃏 Карта дня 10🪙")
 async def card_of_day(message: types.Message, state: FSMContext):
 
     if await is_user_processing(state):
@@ -786,14 +786,14 @@ async def card_of_day(message: types.Message, state: FSMContext):
     )
     await set_processing(state, False)
 
-# ===================== 💰 БАЛАНС =====================
+# ===================== 🪙 БАЛАНС =====================
 
-@router.message(F.text == "💰 Баланс")
+@router.message(F.text == "🪙 Баланс")
 async def balance_handler(message: types.Message):
     balance = await get_balance(message.from_user.id)
 
     await message.answer(
-        f"💰 Ваш баланс: {balance}",
+        f"🪙 Ваш баланс: {balance} монет",
         reply_markup=get_main_keyboard(message.from_user.id)
     )
 
@@ -809,8 +809,8 @@ async def profile_handler(message: types.Message):
         f"👤 Профиль\n\n"
         f"Имя: {user.name}\n"
         f"Дата рождения: {user.birthdate}\n"
-        f"Знак: {zodiac_with_emoji(user.zodiac)}\n"
-        f"Баланс: {balance}",
+        f"Знак: {(user.zodiac)zodiac_with_emoji}\n"
+        f"Баланс: {balance} 🪙",
         reply_markup=get_main_keyboard(message.from_user.id)
     )
 

@@ -27,20 +27,20 @@ class SettingsStates(StatesGroup):
 def get_main_keyboard(user_id: int | None = None):
     keyboard = [
         [
-            types.KeyboardButton(text="🔮 Расклад 10💰"),
-            types.KeyboardButton(text="🃏 Карта дня 10💰"),
+            types.KeyboardButton(text="🔮 Расклад 10🪙"),
+            types.KeyboardButton(text="🃏 Карта дня 10🪙"),
         ],
         [
-            types.KeyboardButton(text="❤️ На отношения 10💰"),
-            types.KeyboardButton(text="💼 На карьеру 10💰"),
+            types.KeyboardButton(text="❤️ На партнера 10🪙"),
+            types.KeyboardButton(text="💼 На карьеру 10🪙"),
         ],
         [
-            types.KeyboardButton(text="❓ Да / Нет 10💰"),
-            types.KeyboardButton(text="🗓 Расклад на год 50💰"),
+            types.KeyboardButton(text="❓ Да / Нет 10🪙"),
+            types.KeyboardButton(text="🗓 На год 50🪙"),
         ],
         [
             types.KeyboardButton(text="👤 Профиль"),
-            types.KeyboardButton(text="💰 Баланс"),
+            types.KeyboardButton(text="🪙 Баланс"),
         ],
         [
             types.KeyboardButton(text="⚙️ Настройки"),
