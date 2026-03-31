@@ -27,16 +27,8 @@ class SettingsStates(StatesGroup):
 def get_main_keyboard(user_id: int | None = None):
     keyboard = [
         [
-            types.KeyboardButton(text="🔮 Расклад 10💰"),
+            types.KeyboardButton(text="🔮 Расклад"),
             types.KeyboardButton(text="🃏 Карта дня 10💰"),
-        ],
-        [
-            types.KeyboardButton(text="❤️ На партнера 10💰"),
-            types.KeyboardButton(text="💼 На карьеру 10💰"),
-        ],
-        [
-            types.KeyboardButton(text="❓ Да / Нет 10💰"),
-            types.KeyboardButton(text="🗓 На год 50💰"),
         ],
         [
             types.KeyboardButton(text="👤 Профиль"),
@@ -47,6 +39,23 @@ def get_main_keyboard(user_id: int | None = None):
             types.KeyboardButton(text="🛟 Поддержка"),
         ],
     ]
+
+def get_spreads_keyboard():
+    return types.ReplyKeyboardMarkup(
+        keyboard=[
+            [
+                types.KeyboardButton(text="🔮 Общий расклад 10💰")
+                types.KeyboardButton(text="❤️ На партнера 10💰")
+            ],
+            [
+                types.KeyboardButton(text="💼 На карьеру 10💰")
+                types.KeyboardButton(text="❓ Да / Нет 10💰")
+            ],
+            [types.KeyboardButton(text="🗓 На год 50💰")],
+            [types.KeyboardButton(text="🔙 Меню")],
+        ],
+        resize_keyboard=True
+    )
 
     if user_id == settings.SUPPORT_ADMIN_ID:
         keyboard.append(

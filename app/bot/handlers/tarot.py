@@ -519,7 +519,7 @@ async def admin_reply(message: types.Message):
 
 # ===================== 🔮 СТАРТ РАСКЛАДА =====================
 
-@router.message(F.text.in_(["🔮 Расклад 10💰", "🔮 Новый расклад 10💰"]))
+@router.message(F.text.in_(["🔮 Общий расклад 10💰", "🔮 Новый расклад 10💰"]))
 async def start_spread(message: types.Message, state: FSMContext):
     
     if await is_user_processing(state):
@@ -534,6 +534,12 @@ async def start_spread(message: types.Message, state: FSMContext):
         reply_markup=get_skip_keyboard()
     )
 
+@router.message(F.text == "🔮 Расклады")
+async def show_spreads_menu(message: types.Message):
+    await message.answer(
+        "Выберите расклад:",
+        reply_markup=get_spreads_keyboard()
+    )
 
 # ===================== ⏭ ПРОПУСК =====================
 
