@@ -809,7 +809,7 @@ async def profile_handler(message: types.Message):
         f"👤 Профиль\n\n"
         f"Имя: {user.name}\n"
         f"Дата рождения: {user.birthdate}\n"
-        f"Знак: {(user.zodiac)zodiac_with_emoji}\n"
+        f"Знак: {zodiac_with_emoji(user.zodiac)}\n"
         f"Баланс: {balance} 🪙",
         reply_markup=get_main_keyboard(message.from_user.id)
     )

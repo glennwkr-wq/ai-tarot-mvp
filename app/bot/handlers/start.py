@@ -87,7 +87,7 @@ def zodiac_with_emoji(zodiac: str) -> str:
         "Водолей": "♒",
         "Рыбы": "♓",
     }
-    return f"{mapping.get(zodiac, '')} {zodiac}"
+    return f"{zodiac} {mapping.get(zodiac, '')}"
 
 @router.message(CommandStart())
 async def start_handler(message: types.Message, state: FSMContext):
