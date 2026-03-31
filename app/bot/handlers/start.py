@@ -44,12 +44,12 @@ def get_spreads_keyboard():
     return types.ReplyKeyboardMarkup(
         keyboard=[
             [
-                types.KeyboardButton(text="🔮 Общий расклад 10💰")
-                types.KeyboardButton(text="❤️ На партнера 10💰")
+                types.KeyboardButton(text="🔮 Общий расклад 10💰"),
+                types.KeyboardButton(text="❤️ На партнера 10💰"),
             ],
             [
-                types.KeyboardButton(text="💼 На карьеру 10💰")
-                types.KeyboardButton(text="❓ Да / Нет 10💰")
+                types.KeyboardButton(text="💼 На карьеру 10💰"),
+                types.KeyboardButton(text="❓ Да / Нет 10💰"),
             ],
             [types.KeyboardButton(text="🗓 На год 50💰")],
             [types.KeyboardButton(text="🔙 Меню")],
