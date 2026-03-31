@@ -22,7 +22,7 @@ from app.services.user_service import (
 )
 from app.services.reading_service import save_reading
 from app.core.config import settings
-
+from app.bot.handlers.start import get_spreads_keyboard
 router = Router()
 
 # ===================== PROCESS LOCK =====================
@@ -534,7 +534,7 @@ async def start_spread(message: types.Message, state: FSMContext):
         reply_markup=get_skip_keyboard()
     )
 
-@router.message(F.text == "🔮 Расклады")
+@router.message(F.text == "🔮 Расклад")
 async def show_spreads_menu(message: types.Message):
     await message.answer(
         "Выберите расклад:",
