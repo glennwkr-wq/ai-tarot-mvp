@@ -107,7 +107,7 @@ def get_skip_keyboard():
 def get_after_reading_keyboard():
     return types.ReplyKeyboardMarkup(
         keyboard=[
-            [types.KeyboardButton(text="🔮 Новый расклад 10💰")],
+            [types.KeyboardButton(text="🔮 Новый расклад")],
             [types.KeyboardButton(text="🔙 Меню")],
         ],
         resize_keyboard=True
@@ -118,8 +118,8 @@ def get_after_reading_keyboard():
 def get_followup_keyboard():
     return types.ReplyKeyboardMarkup(
         keyboard=[
-            [types.KeyboardButton(text="➕ Доп карта 10💰")],
-            [types.KeyboardButton(text="✍️ Уточнить 10💰")],
+            [types.KeyboardButton(text="➕ Доп карта")],
+            [types.KeyboardButton(text="✍️ Уточнить")],
             [types.KeyboardButton(text="🔙 Меню")],
         ],
         resize_keyboard=True
@@ -128,7 +128,7 @@ def get_followup_keyboard():
 
 # ===================== ❓ ДА / НЕТ =====================
 
-@router.message(F.text == "❓ Да / Нет 10💰")
+@router.message(F.text == "❓ Да / Нет")
 async def yesno_start(message: types.Message, state: FSMContext):
 
     if await is_user_processing(state):
@@ -519,7 +519,7 @@ async def admin_reply(message: types.Message):
 
 # ===================== 🔮 СТАРТ РАСКЛАДА =====================
 
-@router.message(F.text.in_(["🔮 Общий расклад 10💰", "🔮 Новый расклад 10💰"]))
+@router.message(F.text.in_(["🔮 Общий расклад", "🔮 Новый расклад"]))
 async def start_spread(message: types.Message, state: FSMContext):
     
     if await is_user_processing(state):
@@ -579,7 +579,7 @@ async def handle_question(message: types.Message, state: FSMContext):
 
 # ===================== ❤️ ОТНОШЕНИЯ =====================
 
-@router.message(F.text == "❤️ На партнера 10💰")
+@router.message(F.text == "❤️ На отношения")
 async def love_reading(message: types.Message, state: FSMContext):
     
     if await is_user_processing(state):
@@ -591,7 +591,7 @@ async def love_reading(message: types.Message, state: FSMContext):
 
 # ===================== 💼 КАРЬЕРА =====================
 
-@router.message(F.text == "💼 На карьеру 10💰")
+@router.message(F.text == "💼 На карьеру")
 async def career_reading(message: types.Message, state: FSMContext):
     
     if await is_user_processing(state):
@@ -600,7 +600,7 @@ async def career_reading(message: types.Message, state: FSMContext):
 
     await process_reading(message, state, "Расклад на карьеру", mode="career")
 
-@router.message(F.text == "🗓 На год 50💰")
+@router.message(F.text == "🗓 На год")
 async def year_reading(message: types.Message, state: FSMContext):
 
     if await is_user_processing(state):
@@ -619,7 +619,7 @@ async def year_reading(message: types.Message, state: FSMContext):
 
 # ===================== ➕ ДОП КАРТА =====================
 
-@router.message(F.text == "➕ Доп карта 10💰")
+@router.message(F.text == "➕ Доп карта")
 async def extra_card(message: types.Message, state: FSMContext):
 
     if await is_user_processing(state):
@@ -670,7 +670,7 @@ async def extra_card(message: types.Message, state: FSMContext):
 
 # ===================== ✍️ УТОЧНЕНИЕ =====================
 
-@router.message(F.text == "✍️ Уточнить 10💰")
+@router.message(F.text == "✍️ Уточнить")
 async def уточнение_start(message: types.Message, state: FSMContext):
 
     if await is_user_processing(state):
@@ -739,7 +739,7 @@ async def уточнение_process(message: types.Message, state: FSMContext):
 
 # ===================== 🃏 КАРТА ДНЯ =====================
 
-@router.message(F.text == "🃏 Карта дня 10💰")
+@router.message(F.text == "🃏 Карта дня")
 async def card_of_day(message: types.Message, state: FSMContext):
 
     if await is_user_processing(state):
