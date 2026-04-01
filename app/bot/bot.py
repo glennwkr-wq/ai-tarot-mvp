@@ -6,7 +6,7 @@ from aiogram.fsm.storage.memory import MemoryStorage
 from aiogram.types import BotCommand
 
 from app.core.config import settings
-from app.bot.handlers import start, tarot
+from app.bot.handlers import start, tarot, payments
 
 from app.db.base import Base
 from app.db.session import engine
@@ -25,6 +25,7 @@ bot = Bot(
 dp = Dispatcher(storage=MemoryStorage())
 
 dp.include_router(start.router)
+dp.include_router(payments.router)
 dp.include_router(tarot.router)
 
 

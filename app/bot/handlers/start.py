@@ -35,6 +35,9 @@ def get_main_keyboard(user_id: int | None = None):
             types.KeyboardButton(text="💰 Баланс"),
         ],
         [
+            types.KeyboardButton(text="💳 Купить монеты"),
+        ],
+        [
             types.KeyboardButton(text="⚙️ Настройки"),
             types.KeyboardButton(text="🛟 Поддержка"),
         ],
