@@ -165,7 +165,7 @@ async def yesno_process(message: types.Message, state: FSMContext):
 
     balance = await get_balance(user_id)
     if balance < 10:
-        await message.answer("❌ Недостаточно кредитов.")
+        await message.answer("❌ Недостаточно монет.")
         return
     await set_processing(state, True)
     await message.answer("🔮 Смотрю карты...")
@@ -210,7 +210,7 @@ async def support_start(message: types.Message, state: FSMContext):
         )
     )
 
-@router.message(F.text == "➕ Начислить кредиты")
+@router.message(F.text == "➕ Начислить монеты")
 async def admin_give_credits_start(message: types.Message, state: FSMContext):
     if message.from_user.id != settings.SUPPORT_ADMIN_ID:
         return
@@ -218,7 +218,7 @@ async def admin_give_credits_start(message: types.Message, state: FSMContext):
     await state.set_state(AdminCreditStates.waiting_for_user_id)
 
     await message.answer(
-        "Введите Telegram ID пользователя, которому нужно начислить кредиты:",
+        "Введите Telegram ID пользователя, которому нужно начислить монеты:",
         reply_markup=types.ReplyKeyboardMarkup(
             keyboard=[[types.KeyboardButton(text="🔙 Меню")]],
             resize_keyboard=True
@@ -401,7 +401,7 @@ async def admin_give_credits_get_user_id(message: types.Message, state: FSMConte
 
     await message.answer(
         f"Пользователь найден: {user.name}\n\n"
-        f"Введите количество кредитов для начисления:",
+        f"Введите количество монет для начисления:",
         reply_markup=types.ReplyKeyboardMarkup(
             keyboard=[[types.KeyboardButton(text="🔙 Меню")]],
             resize_keyboard=True
@@ -451,7 +451,7 @@ async def admin_give_credits_finish(message: types.Message, state: FSMContext):
     await state.clear()
 
     await message.answer(
-        f"✅ Начислено {amount} кредитов пользователю {user.name} ({target_telegram_id}).",
+        f"✅ Начислено {amount} монет пользователю {user.name} ({target_telegram_id}).",
         reply_markup=get_main_keyboard(message.from_user.id)
     )
 
@@ -459,11 +459,11 @@ async def admin_give_credits_finish(message: types.Message, state: FSMContext):
         await message.bot.send_message(
             target_telegram_id,
             f"🎁 Вам подарок от разработчика!\n\n"
-            f"✨ На ваш баланс начислено {amount} кредитов."
+            f"✨ На ваш баланс начислено {amount} монет."
         )
     except Exception:
         await message.answer(
-            "⚠️ Кредиты начислены, но уведомление пользователю отправить не удалось."
+            "⚠️ Монеты начислены, но уведомление пользователю отправить не удалось."
         )
 
 @router.message(SupportStates.waiting_for_message, F.text & ~F.text.in_(["🔙 Меню"]))
@@ -634,7 +634,7 @@ async def extra_card(message: types.Message, state: FSMContext):
 
     balance = await get_balance(user_id)
     if balance < 10:
-        await message.answer("❌ Недостаточно кредитов.")
+        await message.answer("❌ Недостаточно монет.")
         return
     await set_processing(state, True)
     await message.answer("🔮 Тяну дополнительную карту...")
@@ -701,7 +701,7 @@ async def уточнение_process(message: types.Message, state: FSMContext):
 
     balance = await get_balance(user_id)
     if balance < 10:
-        await message.answer("❌ Недостаточно кредитов.")
+        await message.answer("❌ Недостаточно монет.")
         return
     await set_processing(state, True)
     await message.answer("🔮 Уточняю расклад...")
@@ -757,7 +757,7 @@ async def card_of_day(message: types.Message, state: FSMContext):
     if not is_free_today:
         balance = await get_balance(message.from_user.id)
         if balance < 10:
-            await message.answer("❌ Недостаточно кредитов.")
+            await message.answer("❌ Недостаточно монет.")
             return
         await change_balance(message.from_user.id, -10)
 
@@ -866,7 +866,7 @@ async def process_reading(
     balance = await get_balance(user_id)
 
     if balance < price:
-        await message.answer("❌ Недостаточно кредитов.")
+        await message.answer("❌ Недостаточно монет.")
         await set_processing(state, False)
         return
 

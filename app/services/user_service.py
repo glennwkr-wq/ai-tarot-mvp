@@ -158,7 +158,7 @@ async def check_notifications(bot):
                         await bot.send_message(
                             user.telegram_id,
                             "✨ Для вас снова открыт поток энергии.\n\n"
-                            "💰 Начислено +10 кредитов."
+                            "💰 Начислено +10 монет."
                         )
                     except Exception:
                         continue

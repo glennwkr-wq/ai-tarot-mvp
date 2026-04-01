@@ -45,7 +45,7 @@ def get_main_keyboard(user_id: int | None = None):
 
     if user_id == settings.SUPPORT_ADMIN_ID:
         keyboard.append(
-            [types.KeyboardButton(text="➕ Начислить кредиты")]
+            [types.KeyboardButton(text="➕ Начислить монеты")]
         )
         keyboard.append(
             [types.KeyboardButton(text="📢 Сообщение пользователям")]
@@ -167,7 +167,7 @@ async def get_birthdate(message: types.Message, state: FSMContext):
     await message.answer(
         f"✨ Приятно познакомиться, {name}\n\n"
         f"Ваш знак: {zodiac_with_emoji(zodiac)}\n"
-        f"🎁 Вам начислено 30 кредитов\n\n"
+        f"🎁 Вам начислено 30 монет\n\n"
         "🔮 Можем начать работу с картами",
         reply_markup=get_main_keyboard(message.from_user.id)
     )

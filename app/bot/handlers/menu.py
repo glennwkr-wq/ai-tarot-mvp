@@ -5,7 +5,7 @@ router = Router()
 
 @router.message(F.text == "💰 Баланс")
 async def balance_handler(message: types.Message):
-    await message.answer("💰 Ваш баланс: 0 кредитов")
+    await message.answer("💰 Ваш баланс: 0 монет")
 
 
 @router.message(F.text == "🃏 Карта дня")
