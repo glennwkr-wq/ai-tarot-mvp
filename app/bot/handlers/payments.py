@@ -6,12 +6,18 @@ router = Router()
 def get_buy_coins_keyboard():
     return types.ReplyKeyboardMarkup(
         keyboard=[
-            [types.KeyboardButton(text="50 монет — 99₽")],
-            [types.KeyboardButton(text="100 монет — 149₽")],
-            [types.KeyboardButton(text="200 монет — 249₽")],
-            [types.KeyboardButton(text="500 монет — 449₽")],
-            [types.KeyboardButton(text="200 монет — 249⭐")],
-            [types.KeyboardButton(text="500 монет — 449⭐")],
+            [
+                types.KeyboardButton(text="50 монет — 99₽"),
+                types.KeyboardButton(text="100 монет — 149₽"),
+            ],
+            [
+                types.KeyboardButton(text="200 монет — 249₽"),
+                types.KeyboardButton(text="500 монет — 449₽"),
+            ],
+            [
+                types.KeyboardButton(text="200 монет — 249⭐"),
+                types.KeyboardButton(text="500 монет — 449⭐"),
+            ],
             [types.KeyboardButton(text="🔙 Меню")],
         ],
         resize_keyboard=True
